@@ -13,6 +13,10 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+import structlog
+
+logger = structlog.get_logger(__name__)
+
 if TYPE_CHECKING:
     pass
 
@@ -125,6 +129,8 @@ class SessionMetrics:
 
     def start_turn(self) -> TurnMetrics:
         """Create a fresh TurnMetrics and set it as current."""
+        if self.current_turn is not None:
+            self.finish_turn()
         turn = TurnMetrics(turn_index=len(self.turns))
         self.current_turn = turn
         return turn
@@ -133,26 +139,35 @@ class SessionMetrics:
         """Commit the current turn to history and return it."""
         if self.current_turn is None:
             return None
-        self.current_turn.turn_end_s = time.monotonic()
+        if self.current_turn.turn_end_s is None:
+            self.current_turn.turn_end_s = time.monotonic()
         self.turns.append(self.current_turn)
         finished = self.current_turn
         self.current_turn = None
+        
+        logger.info("metrics.turn_finished", session_id=str(self.session_id), turn_index=finished.turn_index, metrics=finished.to_dict())
+        
         return finished
 
     # ── Aggregates ────────────────────────────────────────────────────────
 
     @property
     def total_turns(self) -> int:
-        return len(self.turns)
+        return len(self.turns) + (1 if self.current_turn else 0)
 
     @property
     def avg_end_to_end_ms(self) -> float | None:
         vals = [t.end_to_end_ms for t in self.turns if t.end_to_end_ms is not None]
+        if self.current_turn and self.current_turn.end_to_end_ms is not None:
+            vals.append(self.current_turn.end_to_end_ms)
         return sum(vals) / len(vals) if vals else None
 
     @property
     def total_cost_usd(self) -> float:
-        return sum(t.total_cost_usd for t in self.turns)
+        cost = sum(t.total_cost_usd for t in self.turns)
+        if self.current_turn:
+            cost += self.current_turn.total_cost_usd
+        return cost
 
     @property
     def session_duration_s(self) -> float:
@@ -160,6 +175,10 @@ class SessionMetrics:
         return end - self.connected_at
 
     def to_dict(self) -> dict:
+        turns_list = [t.to_dict() for t in self.turns]
+        if self.current_turn:
+            turns_list.append(self.current_turn.to_dict())
+            
         return {
             "session_id": str(self.session_id),
             "duration_s": round(self.session_duration_s, 2),
@@ -170,7 +189,7 @@ class SessionMetrics:
                 else None
             ),
             "total_cost_usd": round(self.total_cost_usd, 6),
-            "turns": [t.to_dict() for t in self.turns],
+            "turns": turns_list,
         }
 
 
@@ -203,7 +222,11 @@ class MetricsRegistry:
 
     def global_summary(self) -> dict:
         all_sessions = list(self._active.values()) + self._completed
-        all_turns = [t for s in all_sessions for t in s.turns]
+        all_turns = []
+        for s in all_sessions:
+            all_turns.extend(s.turns)
+            if s.current_turn:
+                all_turns.append(s.current_turn)
         e2e_vals = [t.end_to_end_ms for t in all_turns if t.end_to_end_ms is not None]
 
         return {

@@ -77,7 +77,13 @@ async def stt_processor(session: VoiceSession) -> None:
                                     pass
                                 
                             if is_final and text.strip():
-                                session.metrics.current_turn.stt_final_received_s = time.monotonic()
+                                turn = session.metrics.current_turn
+                                if turn:
+                                    turn.stt_final_received_s = time.monotonic()
+                                    dur = getattr(result, "duration", 0.0)
+                                    turn.stt_audio_seconds += dur
+                                    turn.stt_cost_usd += (dur / 60.0) * session.settings.deepgram_cost_per_minute
+
                                 log.debug("stt.final", text=text)
                                 
                                 await session.llm_queue.put(text)

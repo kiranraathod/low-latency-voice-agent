@@ -118,6 +118,7 @@ class VoiceSession:
                 except asyncio.QueueEmpty:
                     break
 
+        self.metrics.finish_turn()
         metrics_registry.complete(self.id)
         log.info("session.teardown.done")
 

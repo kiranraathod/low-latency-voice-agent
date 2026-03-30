@@ -130,9 +130,9 @@ async def llm_processor(session: VoiceSession) -> None:
 
             if turn:
                 turn.llm_done_s = time.monotonic()
-                turn.llm_input_tokens = total_input_tokens
-                turn.llm_output_tokens = total_output_tokens
-                turn.llm_cost_usd = (
+                turn.llm_input_tokens += total_input_tokens
+                turn.llm_output_tokens += total_output_tokens
+                turn.llm_cost_usd += (
                     (total_input_tokens / 1_000_000) * session.settings.gemini_cost_per_1m_input_tokens
                     + (total_output_tokens / 1_000_000) * session.settings.gemini_cost_per_1m_output_tokens
                 )

@@ -42,12 +42,12 @@
 - [x] Full pipeline end-to-end test
 
 ### Phase 5 — Metrics & Observability (Hours 16–19)
-- [ ] Metrics collector (per-session + global)
-- [ ] Cost calculator (STT $/min, LLM $/token, TTS $/char)
-- [ ] `GET /metrics` endpoint
-- [ ] Error handling (timeouts, graceful disconnect, queue drain)
-- [ ] Structured JSON logs (per-stage timing + costs)
-- [ ] Clean session teardown on disconnect
+- [x] Metrics collector (per-session + global)
+- [x] Cost calculator (STT $/min, LLM $/token, TTS $/char)
+- [x] `GET /metrics` endpoint
+- [x] Error handling (timeouts, graceful disconnect, queue drain)
+- [x] Structured JSON logs (per-stage timing + costs)
+- [x] Clean session teardown on disconnect
 
 ### Phase 6 — Docker, Client & Demo (Hours 19–24)
 - [ ] Dockerfile (Python 3.11-slim)

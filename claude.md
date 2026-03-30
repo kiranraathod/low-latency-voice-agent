@@ -62,7 +62,7 @@ Dockerfile, docker-compose.yml, .env.example, README.md
 - [ ] Phase 2: STT Pipeline (Hours 4-7)
 - [ ] Phase 3: LLM + Tool Calling (Hours 7-12)
 - [ ] Phase 4: TTS Pipeline (Hours 12-16)
-- [ ] Phase 5: Metrics & Observability (Hours 16-19)
+- [x] Phase 5: Metrics & Observability (Hours 16-19)
 - [ ] Phase 6: Docker, Client & Demo (Hours 19-24)
 
 ## Commands
