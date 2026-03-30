@@ -105,12 +105,34 @@ async def run_test(wav_path: Path | None, url: str) -> None:
 
 
 def _load_audio(path: Path) -> bytes:
-    """Strip WAV header and return raw PCM, or return raw bytes for MP3/other."""
+    """Strip WAV header and return raw PCM, or transcode via ffmpeg."""
     data = path.read_bytes()
+    
+    # If it's a standard RIFF WAV, just strip the 44-byte header
     if data[:4] == b"RIFF":
-        # Skip 44-byte WAV header (standard PCM)
+        print(f"Detected WAV format for {path.name}.")
         return data[44:]
-    return data
+        
+    print(f"Non-WAV format detected for {path.name}. Attempting on-the-fly ffmpeg transcoding to 16kHz PCM...")
+    import subprocess
+    import shutil
+    
+    if not shutil.which("ffmpeg"):
+        print("ERROR: ffmpeg is not installed or not in PATH. Please install ffmpeg to test with MP3 files, or provide a RAW PCM WAV file instead.", file=sys.stderr)
+        sys.exit(1)
+        
+    try:
+        # Ask ffmpeg to decode the audio mathematically to 16kHz 16-bit Mono PCM and dump straight to stdout
+        process = subprocess.run(
+            ["ffmpeg", "-i", str(path), "-f", "s16le", "-acodec", "pcm_s16le", "-ac", "1", "-ar", "16000", "pipe:1"],
+            capture_output=True,
+            check=True
+        )
+        print(f"Transcoding successful ({len(process.stdout)} bytes generated).")
+        return process.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR transcocing {path}: {e.stderr.decode()}", file=sys.stderr)
+        sys.exit(1)
 
 
 def main() -> None:

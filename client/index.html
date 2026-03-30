@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice AI Agent Prototype</title>
+    <!-- SEO implementation: semantic title and tags -->
+    <meta name="description" content="A real-time, low-latency Voice AI agent prototype streaming audio using Deepgram, Gemini 2.0 Flash, and ElevenLabs.">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <header>
+        <h1>Voice AI Proxy</h1>
+        <p>Real-Time Streaming Voice Assistant</p>
+        <div class="status-indicator" id="status-indicator">
+            <div class="status-dot" id="ws-status-dot"></div>
+            <span id="ws-status-text">Disconnected</span>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel left-panel">
+            <h2 class="section-title">Interaction</h2>
+            
+            <div class="control-center">
+                <button id="mic-btn" class="mic-button" aria-label="Toggle Microphone">
+                    CONNECT
+                </button>
+                <div class="ripple-container">
+                    <div class="ripple"></div>
+                    <div class="ripple"></div>
+                    <div class="ripple"></div>
+                </div>
+            </div>
+
+            <div class="transcript-area" id="transcript-container" aria-live="polite">
+                <!-- Messages will be injected here -->
+                <div class="message msg-system" style="opacity: 0.5;">
+                    Transcript will appear here...
+                </div>
+            </div>
+        </section>
+
+        <aside class="panel right-panel">
+            <h2 class="section-title">Telemetry</h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-title">E2E Latency (Rolling Avg)</div>
+                    <div class="metric-value">
+                        <span id="metric-latency">--</span><span class="metric-unit">ms</span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-title">Total Cost Estimator</div>
+                    <div class="metric-value">
+                        <span class="metric-unit">$</span><span id="metric-cost">0.0000</span>
+                    </div>
+                    <div class="cost-breakdown">
+                        <div class="cost-item">
+                            <span>STT (Deepgram)</span>
+                            <span id="cost-stt">$0.0000</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>LLM (Gemini)</span>
+                            <span id="cost-llm">$0.0000</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>TTS (ElevenLabs)</span>
+                            <span id="cost-tts">$0.0000</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-title">Active Sessions</div>
+                    <div class="metric-value" id="metric-sessions">0</div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

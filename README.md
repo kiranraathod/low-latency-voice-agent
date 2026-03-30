@@ -1,0 +1,96 @@
+# Real-Time Voice AI Agent Prototype
+
+A fully asynchronous, low-latency voice AI agent that streams audio end-to-end. Built to maintain an overall system latency of **≤ 2 seconds**.
+
+## 🚀 Build & Run Instructions
+
+### Prerequisites
+- Docker & Docker Compose
+- API Keys for Deepgram, Google Gemini, and ElevenLabs
+
+### 1. Configure Environment
+Create a `.env` file from the example:
+```bash
+cp .env.example .env
+```
+Ensure you fill out the following keys in your `.env`:
+- `DEEPGRAM_API_KEY`
+- `GEMINI_API_KEY`
+- `ELEVENLABS_API_KEY`
+
+### 2. Start the Service
+Using Docker Compose, the entire stack starts with a single command:
+```bash
+docker compose up --build
+```
+
+### 3. Connect the Client
+Open your browser and navigate to:
+[http://localhost:8000/client/index.html](http://localhost:8000/client/index.html)
+Click **CONNECT** and provide microphone permissions to start talking. 
+
+*To verify server health and metrics directly, you can access:*
+- `GET /health`
+- `GET /metrics`
+
+---
+
+## 🏗️ Streaming & Concurrency Model
+
+The backend leverages a purely asynchronous, concurrent architecture using Python 3.11's `asyncio` and `TaskGroup`:
+- **WebSocket Session Lifecycle**: Each client connects via WebSocket, acting as a single `VoiceSession`.
+- **4 Concurrent Tasks**:
+  1. **Receiver**: Listens to WebSocket binary frames (audio) & text frames (control), forwarding PCM data to the STT queue.
+  2. **STT Processor**: Pulls PCM data and streams it to Deepgram via an active WebSocket. Pushes transcript results to the LLM queue.
+  3. **LLM Processor**: Takes final transcripts and invokes Gemini 2.0 Flash in streaming mode. Chunks tokens at sentence boundaries and drops them into the TTS queue. Handles tool execution inline. 
+  4. **TTS Processor**: Pushes sentences to ElevenLabs' streaming WebSocket, immediately sending binary audio results directly back to the client.
+- **Data Transport**: All tasks communicate via thread-safe `asyncio.Queue` buffers. This naturally provides backpressure handling.
+- **Teardown**: Any failure propagates automatically via `asyncio.TaskGroup`, cleanly draining queues and cancelling sibling tasks to prevent resource leaks.
+
+---
+
+## ⚡ Techniques for ≤ 2s Latency Budget
+
+To guarantee sub-2-second Time-To-First-Audio (TTFA) end-to-end latency:
+1. **Raw PCM Streams**: By avoiding WebRTC and using binary WebSockets (linear16 PCM), we skip heavy browser mux/demux, lowering transport latency.
+2. **Server-Side VAD (Deepgram endpointing)**: We configure `endpointing=300ms`. Deepgram automatically acts as our Voice Activity Detector without requiring client-side intelligence.
+3. **Sentence Pipelining (The Core Technique)**: We do **not** wait for the entire LLM response to complete. Tokens are accumulated until a natural boundary (., ?, !). The moment a sentence completes, it is dispatched to TTS while the LLM continues generating in parallel.
+4. **WebSocket-Only External Endpoints**: Deepgram and ElevenLabs are integrated exclusively via persistent WebSockets, bypassing the connection handshake overhead that REST APIs incur per turn.
+
+---
+
+## 💡 Component Selection Rationale
+
+- **STT**: **Deepgram Nova-2**
+  *Why*: Currently the industry leader in streaming transcription speed. It offers a highly tunable websocket API with built-in VAD (endpointing), which removes complexity from our client logic.
+- **LLM**: **Google Gemini 2.0 Flash**
+  *Why*: Offers incredibly low Time-To-First-Token (TTFT, typically 300-500ms) over its streaming API while providing top-tier native Tool-Calling support, essential for the `play_audio` tool requirement.
+- **TTS**: **ElevenLabs**
+  *Why*: Produces the most natural, human-like voice synthesis with competitive latency when using its optimized WebSocket `stream-input` mode, accepting fragmented text buffers incrementally.
+
+---
+
+## 💰 Cost Estimation Method
+
+We instrument the application to compute costs continuously based on exact usage logic inside the `metrics.py` aggregator layer:
+- **STT (Deepgram)**: Measured by audio duration in seconds. Cost logic: `(audio_duration_secs / 60) * $0.0043`.
+- **LLM (Gemini)**: Measured by precise token usage tracked natively. Tool calls input/output tokens are metered as well. Estimated inputs at `$0.075 / 1M` tokens and outputs at `$0.30 / 1M` tokens.
+- **TTS (ElevenLabs)**: Measured by character length of TTS jobs. Cost logic: `(total_chars / 1000) * $0.30`.
+- **Observability**: Available per turn, per session, and globally via `GET /metrics`. The Web Client dynamically polls this endpoint and projects total session cost directly onto the UI.
+
+---
+
+## 🛑 Failure Scenarios & System Behavior
+
+**Scenario: User abruptly closes the browser tab while TTS is streaming audio back.**
+- **Expected Behavior**:
+  1. FastAPI detects `WebSocketDisconnect`.
+  2. The `TaskGroup` catches the disconnect exception. 
+  3. The `TaskGroup` immediately cancels all four background tasks.
+  4. Specifically, the pending LLM stream is aborted (saving token cost) and the active ElevenLabs WebSocket gracefully closes (saving character cost).
+  5. The `session_manager` logs the final telemetry and cost summary before tearing down the tracking structures automatically without memory leaks.
+
+---
+
+## 📹 Demo Video
+*Link to demo video will be provided by user.*

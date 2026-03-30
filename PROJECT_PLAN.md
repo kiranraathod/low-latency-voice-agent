@@ -50,12 +50,12 @@
 - [x] Clean session teardown on disconnect
 
 ### Phase 6 — Docker, Client & Demo (Hours 19–24)
-- [ ] Dockerfile (Python 3.11-slim)
-- [ ] `docker-compose.yml` (single-command startup)
-- [ ] `.env.example` (API key template)
-- [ ] Browser client (`index.html` + `app.js`, Web Audio API)
-- [ ] Test script (`test_client.py` with pre-recorded WAV)
-- [ ] `README.md` (all required sections)
+- [x] Dockerfile (Python 3.11-slim)
+- [x] `docker-compose.yml` (single-command startup)
+- [x] `.env.example` (API key template)
+- [x] Browser client (`index.html` + `app.js`, Web Audio API)
+- [x] Test script (`test_client.py` with pre-recorded WAV)
+- [x] `README.md` (all required sections)
 - [ ] Demo video recorded (3–5 min)
 
 ---

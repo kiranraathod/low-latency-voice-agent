@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  voice-agent:
+    build: .
+    container_name: voice-agent-prototype
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - voice-network
+
+networks:
+  voice-network:
+    driver: bridge

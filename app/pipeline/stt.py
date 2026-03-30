@@ -33,12 +33,12 @@ async def stt_processor(session: VoiceSession) -> None:
     try:
         async with client.listen.v1.connect(
             model=session.settings.deepgram_model,
-            encoding="linear16", # PCM 16-bit
-            sample_rate=16000,
-            channels=1,
-            endpointing=endpointing_ms,
-            interim_results=True,
-            smart_format=True,
+            encoding="linear16",
+            sample_rate="16000",
+            channels="1",
+            endpointing=str(endpointing_ms),
+            interim_results="true", # Must be lowercase string to avoid URL encode 'True'
+            smart_format="true",
         ) as dg_connection:
             
             # --- 1. Background Receiver Task ---
