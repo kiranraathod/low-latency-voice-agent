@@ -43,6 +43,7 @@ from app.models import (
 )
 from app.pipeline.llm import llm_processor
 from app.pipeline.stt import stt_processor
+from app.pipeline.tts import tts_processor
 from app.session import QUEUE_SENTINEL, VoiceSession, session_manager
 
 logger = structlog.get_logger(__name__)
@@ -176,8 +177,8 @@ async def ws_talk(websocket: WebSocket) -> None:
             session.register_task(t_llm)
 
             t_tts = tg.create_task(
-                _tts_processor_stub(session),
-                name=f"tts_stub:{session.id}",
+                tts_processor(session),
+                name=f"tts:{session.id}",
             )
             session.register_task(t_tts)
 

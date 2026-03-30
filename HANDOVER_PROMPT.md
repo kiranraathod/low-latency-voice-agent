@@ -4,7 +4,7 @@
 
 ```
 <system_role>
-You are an elite AI Systems Architect and Senior Full-Stack Engineer specializing in ultra-low latency real-time voice AI. You are resuming work on a prototype voice AI agent. All planning is complete and Phases 1 & 2 are done — you are now in EXECUTION MODE starting at Phase 3.
+You are an elite AI Systems Architect and Senior Full-Stack Engineer specializing in ultra-low latency real-time voice AI. You are resuming work on a prototype voice AI agent. All planning is complete and Phases 1, 2, & 3 are done — you are now in EXECUTION MODE starting at Phase 4.
 </system_role>
 
 <project_context>
@@ -16,12 +16,12 @@ Path: c:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva
 
 ## Critical Files — READ THESE FIRST
 Before writing ANY code, you MUST read these files:
-1. @[PROJECT_PLAN.md] — Architecture, component selection, 24-hour roadmap, and progress tracker (checkboxes). Phases 1 & 2 are already marked [x] complete.
+1. @[PROJECT_PLAN.md] — Architecture, component selection, 24-hour roadmap, and progress tracker (checkboxes). Phases 1–3 are already marked [x] complete.
 2. @[claude.md] — Tech stack, latency budget, file structure, and commands (uses uv)
 3. @[adiiva_r.md] — Original assignment requirements
-4. @[app/main.py] — FastAPI app entry point (already written — has stub tasks for LLM/TTS)
+4. @[app/main.py] — FastAPI app entry point (already written — has stub tasks for TTS)
 5. @[app/session.py] — Session manager and VoiceSession dataclass (already written)
-6. @[app/pipeline/llm.py] — WHERE YOU WILL WRITE Phase 3 code (currently a stub placeholder)
+6. @[app/pipeline/tts.py] — WHERE YOU WILL WRITE Phase 4 code (currently a stub placeholder)
 
 ## Tech Stack (Already Decided)
 | Component | Technology |
@@ -50,7 +50,7 @@ VAD ~200ms → STT ~150ms → LLM TTFT ~400ms → Chunk ~75ms → TTS ~300ms →
 prototype_adiiva/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py              ✅ FastAPI app, WebSocket handler, 4-task pipeline (stubs for STT/LLM/TTS)
+│   ├── main.py              ✅ FastAPI app, WebSocket handler, 4-task pipeline (stub for TTS)
 │   ├── config.py            ✅ Pydantic settings (API keys, tuning params)
 │   ├── session.py           ✅ VoiceSession dataclass + SessionManager singleton
 │   ├── models.py            ✅ WS message frame models (TranscriptFrame, LLMChunkFrame, etc.)
@@ -59,9 +59,9 @@ prototype_adiiva/
 │   └── pipeline/
 │       ├── __init__.py
 │       ├── stt.py           ✅ STT integration with Deepgram completed
-│       ├── llm.py           ⬅ PHASE 3 TARGET — currently a stub/placeholder
-│       ├── tts.py           ⬅ Phase 4 target — stub placeholder
-│       ├── tools.py         ✅ play_audio tool definition + executor
+│       ├── llm.py           ✅ LLM integration with Gemini Flash completed
+│       ├── tts.py           ⬅ PHASE 4 TARGET — currently a stub/placeholder
+│       ├── tools.py         ✅ play_audio tool definition + executor completed
 │       └── prompts.py       ✅ System prompt (voice-optimised, no markdown)
 ├── client/                  (empty — Phase 6)
 ├── scripts/
@@ -78,8 +78,9 @@ prototype_adiiva/
 ## What's DONE ✅
 - Phase 1 COMPLETE: Full project scaffold, FastAPI app, WebSocket handler, session manager, message models, config, logging.
 - Phase 2 COMPLETE: Deepgram STT integrated. `app/pipeline/stt.py` implements the `stt_processor`, connects to `nova-2`, sends partial transcripts to client via WebSocket, and forwards final transcripts to the `llm_queue`.
+- Phase 3 COMPLETE: Gemini Flash LLM integrated. `app/pipeline/llm.py` implements the `llm_processor`, calls Gemini locally, buffers response into sentence chunks, parses tool calls for `play_audio`, and streams text to `tts_queue`.
 - All dependencies installed in .venv/ via `uv pip install`
-- Verified working: Server starts, Deepgram connects, test audio flows through STT.
+- Verified working: Server starts, Deepgram STT and Gemini LLM tested seamlessly.
 
 ## How to Run (Important — use .venv directly, not uv run)
 ```bash
@@ -94,61 +95,53 @@ prototype_adiiva/
 ```
 Note: `uv run` fails because the local package can't be built as editable. Use .venv\Scripts\python.exe directly instead.
 
-## What's NOT Done — START HERE (Phase 3)
-- **Phase 3: LLM + Tool Calling (Gemini Flash)**
-  - Write `llm_processor()` in `app/pipeline/llm.py`
-  - Replace `_llm_processor_stub()` call in `app/main.py` with the real `llm_processor`
-  - Gemini Flash streaming client (`google-genai` SDK)
-  - System prompt integration (voice assistant persona)
-  - Sentence chunker (buffer LLM tokens, emit on boundaries to `tts_queue`)
-  - `play_audio` tool definition for Gemini
-  - Tool executor (load clip, send via WS)
-  - Conversation memory
-  - LLM latency logging
-  - Token counting for cost estimation
+## What's NOT Done — START HERE (Phase 4)
+- **Phase 4: TTS Pipeline (ElevenLabs)**
+  - Write `tts_processor()` in `app/pipeline/tts.py`
+  - Replace `_tts_processor_stub()` call in `app/main.py` with the real `tts_processor`
+  - ElevenLabs streaming client (WebSocket API mapped logic)
+  - Text streaming (sentence chunks → ElevenLabs)
+  - Audio forwarding (MP3 chunks → client WS)
+  - Voice selection (fast, natural voice like `Rachel`)
+  - TTS latency logging (Time-to-first-audio)
+  - Character counting for cost estimation
 
-- Phase 4: TTS Pipeline (ElevenLabs)
 - Phase 5: Error handling polish (already partially built in metrics.py)
 - Phase 6: Docker, Browser Client & README
 
 ## Key Implementation Details You Must Know
 ### Queue/Sentinel pattern (already in app/session.py):
 - `QUEUE_SENTINEL = None` — placing None on a queue signals the consumer to shut down
-- Each task propagates sentinels downstream (`stt_processor` already does this sending to `llm_queue`).
-- Your real `llm_processor` must do the same: get from `llm_queue`, put to `tts_queue`, propagate sentinel.
+- Each task propagates sentinels downstream (`llm_processor` already does this sending to `tts_queue`).
+- Your real `tts_processor` must: get from `tts_queue`, stream out over REST/websockets matching the sentence chunks, stream audio binary frames over `session.websocket`.
 
 ### How to replace a stub in main.py:
-In `app/main.py` the TaskGroup currently references `_llm_processor_stub()`.
+In `app/main.py` the TaskGroup currently references `_tts_processor_stub()`.
 Replace with:
 ```python
-from app.pipeline.llm import llm_processor
+from app.pipeline.tts import tts_processor
 # then in the TaskGroup:
-t_llm = tg.create_task(llm_processor(session), name=f"llm:{session.id}")
+t_tts = tg.create_task(tts_processor(session), name=f"tts:{session.id}")
 ```
 
-### Deepgram STT context:
-Deepgram STT puts string final transcripts into `session.llm_queue`. Your LLM processor will read these strings using `await session.llm_queue.get()`.
+### ElevenLabs TTS context:
+ElevenLabs TTS must read string final sentence chunks from `session.tts_queue` using `await session.tts_queue.get()`. Your TTS worker loops to stream this payload to ElevenLabs natively via elevenlabs websockets, and proxies chunk responses natively into `session.websocket.send_bytes()`.
 
-### Audio format from browser client (Phase 6) will be:
-- WebM/Opus from MediaRecorder API
-- Deepgram accepts: encoding=opus, container=webm (or raw PCM)
-- For test_client.py: raw PCM 16-bit 16kHz mono (WAV header stripped)
-
-### Session object (VoiceSession) fields available to stt_processor:
-- session.stt_queue — read audio bytes from here
-- session.llm_queue — push final transcripts here
-- session.metrics — call session.metrics.current_turn.stt_final_received_s = time.monotonic()
-- session.websocket — send TranscriptFrame JSON to client
+### Session object (VoiceSession) fields available to tts_processor:
+- session.tts_queue — read string chunks from here
+- session.metrics — call session.metrics.current_turn.tts_first_chunk_s = time.monotonic()
+- session.websocket — send binary audio frames to client here
+- session.barge_in_event — detect if playback should abort immediately
 - session.id — for logging (bind to structlog logger)
-- session.settings — config (deepgram_api_key, deepgram_model, deepgram_endpointing_ms, etc.)
+- session.settings — config (elevenlabs_api_key, elevenlabs_voice_id, elevenlabs_model_id, etc.)
 </project_context>
 
 <instructions>
-1. Read @[PROJECT_PLAN.md], @[app/main.py], @[app/session.py], and @[app/pipeline/llm.py] first.
-2. Implement Phase 3: write the real `llm_processor()` in `app/pipeline/llm.py` using `google-genai`.
-3. Update `app/main.py` to import and use `llm_processor` instead of `_llm_processor_stub`.
+1. Read @[PROJECT_PLAN.md], @[app/main.py], @[app/session.py], and @[app/pipeline/tts.py] first.
+2. Implement Phase 4: write the real `tts_processor()` in `app/pipeline/tts.py` using ElevenLabs API.
+3. Update `app/main.py` to import and use `tts_processor` instead of `_tts_processor_stub`.
 4. As you complete tasks, update the checkboxes in PROJECT_PLAN.md ([ ] → [x]).
-5. After Phase 3 is verified working, confirm completion and ask for approval before Phase 4.
+5. After Phase 4 is verified working, confirm completion and ask for approval before Phase 5.
 6. Use `.venv\Scripts\python.exe` directly (not uv run — it's broken for this project).
 7. Write production-quality async Python — this is being evaluated.
 8. Prioritize the ≤ 2s latency requirement above all else.

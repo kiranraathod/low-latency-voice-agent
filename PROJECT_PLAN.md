@@ -39,7 +39,7 @@
 - [ ] Voice selection (fast, natural voice)
 - [ ] TTS latency logging
 - [ ] Character counting for cost estimation
-- [ ] Full pipeline end-to-end test
+- [x] Full pipeline end-to-end test
 
 ### Phase 5 — Metrics & Observability (Hours 16–19)
 - [ ] Metrics collector (per-session + global)
