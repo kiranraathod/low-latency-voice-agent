@@ -48,3 +48,26 @@ INFO:     connection closed
 {"session_id": "7541127a-53c0-4af1-8529-2c75059480b6", "event": "session.teardown.done", "logger": "app.session", "level": "info", "timestamp": "2026-03-30T18:40:24.522723Z"}
 {"session_id": "7541127a-53c0-4af1-8529-2c75059480b6", "active_count": 0, "event": "session.destroyed", "logger": "app.session", "level": "info", "timestamp": "2026-03-30T18:40:24.522723Z"}
 {"session_id": "7541127a-53c0-4af1-8529-2c75059480b6", "event": "ws.closed", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:40:24.522723Z"}
+INFO:     127.0.0.1:63819 - "WebSocket /ws/talk" [accepted]
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "active_count": 1, "event": "session.created", "logger": "app.session", "level": "info", "timestamp": "2026-03-30T18:51:35.357761Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "event": "ws.connected", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.358311Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "audio_receiver", "event": "audio_receiver.start", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.359294Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "stt_processor", "event": "stt.start", "logger": "app.pipeline.stt", "level": "info", "timestamp": "2026-03-30T18:51:35.360292Z"}
+INFO:     connection open
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "stt_processor", "error": "'AsyncListenClient' object has no attribute 'v'", "event": "stt.fatal_error", "logger": "app.pipeline.stt", "level": "error", "timestamp": "2026-03-30T18:51:35.979904Z", "exception": "Traceback (most recent call last):\n  File \"C:\\Users\\ratho\\Desktop\\data analysis\\clone_github\\prototype_adiiva\\app\\pipeline\\stt.py\", line 34, in stt_processor\n    async with client.listen.v1.connect(\n               ^^^^^^^^^^^^^^^\nAttributeError: 'AsyncListenClient' object has no attribute 'v'"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "stt_processor", "event": "stt.done", "logger": "app.pipeline.stt", "level": "info", "timestamp": "2026-03-30T18:51:35.980748Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "llm_stub", "event": "llm_stub.start", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.980748Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "llm_stub", "event": "llm_stub.sentinel_received", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.980748Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "llm_stub", "event": "llm_stub.done", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.981749Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "tts_stub", "event": "tts_stub.start", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.981749Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "tts_stub", "event": "tts_stub.sentinel_received", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.981749Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "tts_stub", "event": "tts_stub.done", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.981749Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "audio_receiver", "event": "control.start", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:35.983763Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "audio_receiver", "event": "control.stop", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:37.849623Z"}
+INFO:     connection closed
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "audio_receiver", "event": "audio_receiver.disconnect_signal", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:40.858005Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task": "audio_receiver", "event": "audio_receiver.done", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:40.858925Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "task_count": 4, "event": "session.teardown.start", "logger": "app.session", "level": "info", "timestamp": "2026-03-30T18:51:40.858925Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "event": "session.teardown.done", "logger": "app.session", "level": "info", "timestamp": "2026-03-30T18:51:40.858925Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "active_count": 0, "event": "session.destroyed", "logger": "app.session", "level": "info", "timestamp": "2026-03-30T18:51:40.859925Z"}
+{"session_id": "fc1536c2-07eb-4782-9db9-8728be420f32", "event": "ws.closed", "logger": "app.main", "level": "info", "timestamp": "2026-03-30T18:51:40.859925Z"}

@@ -23,14 +23,14 @@
 - [x] Send partial transcripts to client as JSON
 
 ### Phase 3 — LLM + Tool Calling (Hours 7–12)
-- [ ] Gemini Flash streaming client (`google-genai` SDK)
-- [ ] System prompt (voice assistant persona)
-- [ ] Sentence chunker (buffer tokens, emit on boundaries)
-- [ ] `play_audio` tool definition for Gemini
-- [ ] Tool executor (load clip, send via WS)
-- [ ] Conversation memory (last 10 turns, in-memory)
-- [ ] LLM latency logging (TTFT + total)
-- [ ] Token counting for cost estimation
+- [x] Gemini Flash streaming client (`google-genai` SDK)
+- [x] System prompt (voice assistant persona)
+- [x] Sentence chunker (buffer tokens, emit on boundaries)
+- [x] `play_audio` tool definition for Gemini
+- [x] Tool executor (load clip, send via WS)
+- [x] Conversation memory (last 10 turns, in-memory)
+- [x] LLM latency logging (TTFT + total)
+- [x] Token counting for cost estimation
 
 ### Phase 4 — TTS Integration (Hours 12–16)
 - [ ] ElevenLabs streaming WebSocket client

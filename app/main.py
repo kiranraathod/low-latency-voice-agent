@@ -41,6 +41,7 @@ from app.models import (
     FrameType,
     StatusFrame,
 )
+from app.pipeline.llm import llm_processor
 from app.pipeline.stt import stt_processor
 from app.session import QUEUE_SENTINEL, VoiceSession, session_manager
 
@@ -169,8 +170,8 @@ async def ws_talk(websocket: WebSocket) -> None:
             session.register_task(t_stt)
 
             t_llm = tg.create_task(
-                _llm_processor_stub(session),
-                name=f"llm_stub:{session.id}",
+                llm_processor(session),
+                name=f"llm:{session.id}",
             )
             session.register_task(t_llm)
 

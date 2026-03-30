@@ -4,7 +4,7 @@
 
 ```
 <system_role>
-You are an elite AI Systems Architect and Senior Full-Stack Engineer specializing in ultra-low latency real-time voice AI. You are resuming work on a prototype voice AI agent. All planning is complete and Phase 1 is done — you are now in EXECUTION MODE starting at Phase 2.
+You are an elite AI Systems Architect and Senior Full-Stack Engineer specializing in ultra-low latency real-time voice AI. You are resuming work on a prototype voice AI agent. All planning is complete and Phases 1 & 2 are done — you are now in EXECUTION MODE starting at Phase 3.
 </system_role>
 
 <project_context>
@@ -16,12 +16,12 @@ Path: c:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva
 
 ## Critical Files — READ THESE FIRST
 Before writing ANY code, you MUST read these files:
-1. @[PROJECT_PLAN.md] — Architecture, component selection, 24-hour roadmap, and progress tracker (checkboxes). Phase 1 is already marked [x] complete.
+1. @[PROJECT_PLAN.md] — Architecture, component selection, 24-hour roadmap, and progress tracker (checkboxes). Phases 1 & 2 are already marked [x] complete.
 2. @[claude.md] — Tech stack, latency budget, file structure, and commands (uses uv)
 3. @[adiiva_r.md] — Original assignment requirements
-4. @[app/main.py] — FastAPI app entry point (already written — has stub tasks for STT/LLM/TTS)
+4. @[app/main.py] — FastAPI app entry point (already written — has stub tasks for LLM/TTS)
 5. @[app/session.py] — Session manager and VoiceSession dataclass (already written)
-6. @[app/pipeline/stt.py] — WHERE YOU WILL WRITE Phase 2 code (currently a stub placeholder)
+6. @[app/pipeline/llm.py] — WHERE YOU WILL WRITE Phase 3 code (currently a stub placeholder)
 
 ## Tech Stack (Already Decided)
 | Component | Technology |
@@ -58,8 +58,8 @@ prototype_adiiva/
 │   ├── logging_config.py    ✅ structlog JSON setup
 │   └── pipeline/
 │       ├── __init__.py
-│       ├── stt.py           ⬅ PHASE 2 TARGET — currently a stub/placeholder
-│       ├── llm.py           ⬅ Phase 3 target — stub placeholder
+│       ├── stt.py           ✅ STT integration with Deepgram completed
+│       ├── llm.py           ⬅ PHASE 3 TARGET — currently a stub/placeholder
 │       ├── tts.py           ⬅ Phase 4 target — stub placeholder
 │       ├── tools.py         ✅ play_audio tool definition + executor
 │       └── prompts.py       ✅ System prompt (voice-optimised, no markdown)
@@ -76,11 +76,10 @@ prototype_adiiva/
 ```
 
 ## What's DONE ✅
-- Phase 1 COMPLETE: Full project scaffold, FastAPI app, WebSocket handler, session manager,
-  message models, config (pydantic-settings), /health, /metrics, structlog JSON logging.
-- Verified working: server starts, /health returns {"status":"ok"}, /metrics returns JSON,
-  WebSocket connects and the 4-task pipeline runs (stubs) with clean JSON log output.
+- Phase 1 COMPLETE: Full project scaffold, FastAPI app, WebSocket handler, session manager, message models, config, logging.
+- Phase 2 COMPLETE: Deepgram STT integrated. `app/pipeline/stt.py` implements the `stt_processor`, connects to `nova-2`, sends partial transcripts to client via WebSocket, and forwards final transcripts to the `llm_queue`.
 - All dependencies installed in .venv/ via `uv pip install`
+- Verified working: Server starts, Deepgram connects, test audio flows through STT.
 
 ## How to Run (Important — use .venv directly, not uv run)
 ```bash
@@ -95,18 +94,19 @@ prototype_adiiva/
 ```
 Note: `uv run` fails because the local package can't be built as editable. Use .venv\Scripts\python.exe directly instead.
 
-## What's NOT Done — START HERE (Phase 2)
-- **Phase 2: STT Pipeline (Deepgram Nova-2 integration)**
-  - Write stt_processor() in app/pipeline/stt.py
-  - Replace _stt_processor_stub() call in app/main.py with the real stt_processor
-  - Deepgram streaming WebSocket client
-  - Audio forwarding (stt_queue → Deepgram)
-  - Transcript handling (partials + finals)
-  - Endpointing config (endpointing=300ms)
-  - STT latency logging to session.metrics
-  - Send partial transcripts to client as TranscriptFrame JSON
+## What's NOT Done — START HERE (Phase 3)
+- **Phase 3: LLM + Tool Calling (Gemini Flash)**
+  - Write `llm_processor()` in `app/pipeline/llm.py`
+  - Replace `_llm_processor_stub()` call in `app/main.py` with the real `llm_processor`
+  - Gemini Flash streaming client (`google-genai` SDK)
+  - System prompt integration (voice assistant persona)
+  - Sentence chunker (buffer LLM tokens, emit on boundaries to `tts_queue`)
+  - `play_audio` tool definition for Gemini
+  - Tool executor (load clip, send via WS)
+  - Conversation memory
+  - LLM latency logging
+  - Token counting for cost estimation
 
-- Phase 3: LLM + Tool Calling (Gemini Flash)
 - Phase 4: TTS Pipeline (ElevenLabs)
 - Phase 5: Error handling polish (already partially built in metrics.py)
 - Phase 6: Docker, Browser Client & README
@@ -114,25 +114,20 @@ Note: `uv run` fails because the local package can't be built as editable. Use .
 ## Key Implementation Details You Must Know
 ### Queue/Sentinel pattern (already in app/session.py):
 - `QUEUE_SENTINEL = None` — placing None on a queue signals the consumer to shut down
-- Each stub already propagates sentinels downstream (stt→llm→tts)
-- Your real stt_processor must do the same: get from stt_queue, put to llm_queue, propagate sentinel
+- Each task propagates sentinels downstream (`stt_processor` already does this sending to `llm_queue`).
+- Your real `llm_processor` must do the same: get from `llm_queue`, put to `tts_queue`, propagate sentinel.
 
 ### How to replace a stub in main.py:
-In app/main.py the TaskGroup currently references _stt_processor_stub().
+In `app/main.py` the TaskGroup currently references `_llm_processor_stub()`.
 Replace with:
 ```python
-from app.pipeline.stt import stt_processor
+from app.pipeline.llm import llm_processor
 # then in the TaskGroup:
-t_stt = tg.create_task(stt_processor(session), name=f"stt:{session.id}")
+t_llm = tg.create_task(llm_processor(session), name=f"llm:{session.id}")
 ```
 
-### Deepgram SDK version installed: deepgram-sdk==6.1.1
-Use the v3/v6 async client (not the old v2 API). Key pattern:
-```python
-from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
-client = DeepgramClient(api_key=settings.deepgram_api_key)
-connection = client.listen.asyncwebsocket.v("1")
-```
+### Deepgram STT context:
+Deepgram STT puts string final transcripts into `session.llm_queue`. Your LLM processor will read these strings using `await session.llm_queue.get()`.
 
 ### Audio format from browser client (Phase 6) will be:
 - WebM/Opus from MediaRecorder API
@@ -149,12 +144,12 @@ connection = client.listen.asyncwebsocket.v("1")
 </project_context>
 
 <instructions>
-1. Read @[PROJECT_PLAN.md], @[app/main.py], @[app/session.py], and @[app/pipeline/stt.py] first.
-2. Implement Phase 2: write the real stt_processor() in app/pipeline/stt.py using deepgram-sdk v6.
-3. Update app/main.py to import and use stt_processor instead of _stt_processor_stub.
+1. Read @[PROJECT_PLAN.md], @[app/main.py], @[app/session.py], and @[app/pipeline/llm.py] first.
+2. Implement Phase 3: write the real `llm_processor()` in `app/pipeline/llm.py` using `google-genai`.
+3. Update `app/main.py` to import and use `llm_processor` instead of `_llm_processor_stub`.
 4. As you complete tasks, update the checkboxes in PROJECT_PLAN.md ([ ] → [x]).
-5. After Phase 2 is verified working, confirm completion and ask for approval before Phase 
-6. Use .venv\Scripts\python.exe directly (not uv run — it's broken for this project).
+5. After Phase 3 is verified working, confirm completion and ask for approval before Phase 4.
+6. Use `.venv\Scripts\python.exe` directly (not uv run — it's broken for this project).
 7. Write production-quality async Python — this is being evaluated.
 8. Prioritize the ≤ 2s latency requirement above all else.
 </instructions>
