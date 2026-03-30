@@ -13,7 +13,7 @@ import asyncio
 from pathlib import Path
 
 import structlog
-from google.genai import types as genai_types
+    # (Removed google.genai import)
 
 from app.models import AudioReadyFrame, FrameType, ToolCallFrame
 from app.session import VoiceSession
@@ -23,32 +23,35 @@ logger = structlog.get_logger(__name__)
 # Path to the bundled audio clip (created in Phase 6 / assets setup)
 NOTIFICATION_CLIP_PATH = Path("assets/notification.mp3")
 
-# ── Tool Definitions (Gemini FunctionDeclaration format) ──────────────────────
+# ── Tool Definitions (OpenAI Function Calling format) ──────────────────────
 
-PLAY_AUDIO_DECLARATION = genai_types.FunctionDeclaration(
-    name="play_audio",
-    description=(
-        "Play a short audio notification or alert sound to the user. "
-        "Use this when the user asks to hear a sound, chime, or notification."
-    ),
-    parameters=genai_types.Schema(
-        type=genai_types.Type.OBJECT,
-        properties={
-            "clip_name": genai_types.Schema(
-                type=genai_types.Type.STRING,
-                description=(
-                    "The name of the audio clip to play. "
-                    "Currently only 'notification' is supported."
-                ),
-                enum=["notification"],
-            ),
+PLAY_AUDIO_DECLARATION = {
+    "type": "function",
+    "function": {
+        "name": "play_audio",
+        "description": (
+            "Play a short audio notification or alert sound to the user. "
+            "Use this when the user asks to hear a sound, chime, or notification."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "clip_name": {
+                    "type": "string",
+                    "description": (
+                        "The name of the audio clip to play. "
+                        "Currently only 'notification' is supported."
+                    ),
+                    "enum": ["notification"],
+                },
+            },
+            "required": ["clip_name"],
         },
-        required=["clip_name"],
-    ),
-)
+    }
+}
 
-# All tools exposed to Gemini
-ALL_TOOLS = [genai_types.Tool(function_declarations=[PLAY_AUDIO_DECLARATION])]
+# All tools exposed to OpenAI
+ALL_TOOLS = [PLAY_AUDIO_DECLARATION]
 
 
 # ── Tool Executor ─────────────────────────────────────────────────────────────

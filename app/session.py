@@ -57,7 +57,7 @@ class VoiceSession:
     _tasks: list[asyncio.Task] = field(default_factory=list, init=False, repr=False)
 
     # ── Conversation memory ───────────────────────────────────────────────
-    # List of {"role": "user"|"model", "parts": [{"text": "..."}]}
+    # List of {"role": "user"|"assistant"|"system"|"tool", "content": "..."}
     history: list[dict[str, Any]] = field(default_factory=list, init=False)
 
     # ── Metrics ───────────────────────────────────────────────────────────
@@ -79,16 +79,16 @@ class VoiceSession:
     # ── Conversation history helpers ──────────────────────────────────────
 
     def add_user_turn(self, text: str) -> None:
-        self.history.append({"role": "user", "parts": [{"text": text}]})
+        self.history.append({"role": "user", "content": text})
         self._trim_history()
 
     def add_model_turn(self, text: str) -> None:
-        self.history.append({"role": "model", "parts": [{"text": text}]})
+        self.history.append({"role": "assistant", "content": text})
         self._trim_history()
 
     def _trim_history(self) -> None:
         """Keep only the last N turn-pairs (user + model = 1 pair)."""
-        max_messages = self.settings.gemini_max_history_turns * 2
+        max_messages = self.settings.openai_max_history_turns * 2
         if len(self.history) > max_messages:
             self.history = self.history[-max_messages:]
 

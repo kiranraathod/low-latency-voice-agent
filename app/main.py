@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         "voice_agent.starting",
         host=settings.host,
         port=settings.port,
-        gemini_model=settings.gemini_model,
+        openai_model=settings.openai_model,
         deepgram_model=settings.deepgram_model,
         elevenlabs_model=settings.elevenlabs_model_id,
     )

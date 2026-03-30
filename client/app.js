@@ -192,6 +192,8 @@ async function handleWebSocketMessage(event) {
 function handleJsonPayload(payload) {
     if (payload.type === "transcript") {
         renderTranscript(payload);
+    } else if (payload.type === "llm_chunk") {
+        handleLLMChunk(payload);
     } else if (payload.type === "status") {
         console.log("Status:", payload.event, payload.detail);
     } else if (payload.type === "error") {
@@ -200,6 +202,7 @@ function handleJsonPayload(payload) {
 }
 
 let partialTranscriptElement = null;
+let currentAssistantElement = null;
 
 function renderTranscript(payload) {
     const kind = payload.kind ? payload.kind.toLowerCase() : "";
@@ -215,24 +218,54 @@ function renderTranscript(payload) {
             partialTranscriptElement.remove();
             partialTranscriptElement = null;
         }
-        const finalElem = document.createElement("div");
-        finalElem.className = "message msg-user";
-        finalElem.textContent = payload.text;
-        transcriptContainer.appendChild(finalElem);
         
-        // Add a stub for assistant reply
-        const assistantElem = document.createElement("div");
-        assistantElem.className = "message msg-assistant";
-        assistantElem.textContent = "generating reply...";
-        assistantElem.style.opacity = "0.5";
-        transcriptContainer.appendChild(assistantElem);
-        
-        // We could listen for LLM/TTS text frames if the backend sends them (optional)
-        // But the backend streams audio to us. We just clear the stub after a short delay.
-        setTimeout(() => {
-            assistantElem.textContent = "...";
-            assistantElem.style.opacity = "1";
-        }, 1000);
+        // Only create user message + assistant placeholder if we don't have one pending
+        if (!currentAssistantElement) {
+            const finalElem = document.createElement("div");
+            finalElem.className = "message msg-user";
+            finalElem.textContent = payload.text;
+            transcriptContainer.appendChild(finalElem);
+            
+            // Create a single assistant placeholder that will be filled by llm_chunk frames
+            currentAssistantElement = document.createElement("div");
+            currentAssistantElement.className = "message msg-assistant";
+            currentAssistantElement.textContent = "";
+            currentAssistantElement.style.opacity = "0.5";
+            transcriptContainer.appendChild(currentAssistantElement);
+        }
+    }
+    
+    transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+}
+
+function handleLLMChunk(payload) {
+    if (!currentAssistantElement) {
+        // Create one if it doesn't exist yet (edge case)
+        currentAssistantElement = document.createElement("div");
+        currentAssistantElement.className = "message msg-assistant";
+        currentAssistantElement.textContent = "";
+        transcriptContainer.appendChild(currentAssistantElement);
+    }
+    
+    // Make it fully visible on first chunk
+    currentAssistantElement.style.opacity = "1";
+    
+    // Append the text chunk (sentences arrive one at a time)
+    if (currentAssistantElement.textContent) {
+        currentAssistantElement.textContent += " " + payload.text;
+    } else {
+        currentAssistantElement.textContent = payload.text;
+    }
+    
+    // If this is a sentence end and the response might be complete,
+    // prepare for the next turn
+    if (payload.is_sentence_end) {
+        // Mark this assistant element as complete after a brief delay
+        // so subsequent chunks from the same turn still append
+        clearTimeout(window._assistantResetTimer);
+        window._assistantResetTimer = setTimeout(() => {
+            currentAssistantElement = null;
+        }, 2000);
     }
     
     transcriptContainer.scrollTop = transcriptContainer.scrollHeight;

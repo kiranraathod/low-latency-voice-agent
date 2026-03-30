@@ -24,7 +24,8 @@ class Settings(BaseSettings):
 
     # ── API Keys ──────────────────────────────────────────────────────────────
     deepgram_api_key: str = Field(..., description="Deepgram API key")
-    gemini_api_key: str = Field(..., description="Google Gemini API key")
+    openai_api_key: str = Field(..., description="OpenAI API key")
+    openai_base_url: str | None = Field(default=None, description="Optional Base URL")
     elevenlabs_api_key: str = Field(..., description="ElevenLabs API key")
 
     # ── ElevenLabs ────────────────────────────────────────────────────────────
@@ -46,16 +47,16 @@ class Settings(BaseSettings):
         description="Silence (ms) before Deepgram finalises transcript",
     )
 
-    # ── Gemini ───────────────────────────────────────────────────────────────
-    gemini_model: str = Field(
-        default="gemini-2.0-flash",
-        description="Gemini model to use",
+    # ── OpenAI ───────────────────────────────────────────────────────────────
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        description="OpenAI model to use",
     )
-    gemini_max_history_turns: int = Field(
+    openai_max_history_turns: int = Field(
         default=10,
         description="Max conversation turns kept in session memory",
     )
-    gemini_timeout_s: float = Field(
+    openai_timeout_s: float = Field(
         default=8.0,
         description="LLM response timeout in seconds",
     )
@@ -77,8 +78,8 @@ class Settings(BaseSettings):
     # ── Cost Rates (USD) ──────────────────────────────────────────────────────
     # Based on published pricing as of Q1 2025
     deepgram_cost_per_minute: float = Field(default=0.0043)
-    gemini_cost_per_1m_input_tokens: float = Field(default=0.075)
-    gemini_cost_per_1m_output_tokens: float = Field(default=0.30)
+    openai_cost_per_1m_input_tokens: float = Field(default=0.15)
+    openai_cost_per_1m_output_tokens: float = Field(default=0.60)
     elevenlabs_cost_per_1k_chars: float = Field(default=0.30)
 
     @field_validator("log_level")

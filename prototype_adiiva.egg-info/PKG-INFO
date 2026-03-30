@@ -11,12 +11,12 @@ Requires-Dist: pydantic>=2.9.0
 Requires-Dist: pydantic-settings>=2.6.0
 Requires-Dist: structlog>=24.4.0
 Requires-Dist: deepgram-sdk>=3.7.0
-Requires-Dist: google-genai>=1.0.0
 Requires-Dist: elevenlabs>=1.9.0
 Requires-Dist: aiohttp>=3.10.0
 Requires-Dist: aiofiles>=24.1.0
 Requires-Dist: python-dotenv>=1.0.0
 Requires-Dist: httpx>=0.27.0
+Requires-Dist: openai>=2.30.0
 
 # Real-Time Voice AI Agent Prototype
 

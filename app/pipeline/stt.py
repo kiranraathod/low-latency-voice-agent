@@ -85,10 +85,12 @@ async def stt_processor(session: VoiceSession) -> None:
                                     turn.stt_cost_usd += (dur / 60.0) * session.settings.deepgram_cost_per_minute
 
                                 log.debug("stt.final", text=text)
-                                
+
+                            # Only send to LLM on speech_final (end of full utterance)
+                            # This prevents multiple LLM calls per spoken phrase
+                            if speech_final and text.strip():
+                                log.info("stt.speech_final", text=text)
                                 await session.llm_queue.put(text)
-                                session.add_user_turn(text)
-                                
                 except asyncio.CancelledError:
                     pass
                 except Exception as e:
