@@ -41,6 +41,7 @@ from app.models import (
     FrameType,
     StatusFrame,
 )
+from app.pipeline.stt import stt_processor
 from app.session import QUEUE_SENTINEL, VoiceSession, session_manager
 
 logger = structlog.get_logger(__name__)
@@ -162,8 +163,8 @@ async def ws_talk(websocket: WebSocket) -> None:
 
             # Tasks 2–4: pipeline processors (stubs for Phase 1)
             t_stt = tg.create_task(
-                _stt_processor_stub(session),
-                name=f"stt_stub:{session.id}",
+                stt_processor(session),
+                name=f"stt:{session.id}",
             )
             session.register_task(t_stt)
 

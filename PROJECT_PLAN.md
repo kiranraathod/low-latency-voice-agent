@@ -15,12 +15,12 @@
 - [x] Structured logging (`structlog` JSON output)
 
 ### Phase 2 — STT Integration (Hours 4–7)
-- [ ] Deepgram streaming WebSocket client
-- [ ] Audio forwarding (`audio_receiver` → Deepgram)
-- [ ] Transcript handling (partials + finals parsing)
-- [ ] Endpointing config (`endpointing=300`)
-- [ ] STT latency logging
-- [ ] Send partial transcripts to client as JSON
+- [x] Deepgram streaming WebSocket client
+- [x] Audio forwarding (`audio_receiver` → Deepgram)
+- [x] Transcript handling (partials + finals parsing)
+- [x] Endpointing config (`endpointing=300`)
+- [x] STT latency logging
+- [x] Send partial transcripts to client as JSON
 
 ### Phase 3 — LLM + Tool Calling (Hours 7–12)
 - [ ] Gemini Flash streaming client (`google-genai` SDK)
