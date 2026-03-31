@@ -57,7 +57,7 @@ class VoiceSession:
     _tasks: list[asyncio.Task] = field(default_factory=list, init=False, repr=False)
 
     # ── Conversation memory ───────────────────────────────────────────────
-    # List of {"role": "user"|"model", "parts": [{"text": "..."}]}
+    # List of {"role": "user"|"assistant"|"system"|"tool", "content": "..."}
     history: list[dict[str, Any]] = field(default_factory=list, init=False)
 
     # ── Metrics ───────────────────────────────────────────────────────────
@@ -79,16 +79,16 @@ class VoiceSession:
     # ── Conversation history helpers ──────────────────────────────────────
 
     def add_user_turn(self, text: str) -> None:
-        self.history.append({"role": "user", "parts": [{"text": text}]})
+        self.history.append({"role": "user", "content": text})
         self._trim_history()
 
     def add_model_turn(self, text: str) -> None:
-        self.history.append({"role": "model", "parts": [{"text": text}]})
+        self.history.append({"role": "assistant", "content": text})
         self._trim_history()
 
     def _trim_history(self) -> None:
         """Keep only the last N turn-pairs (user + model = 1 pair)."""
-        max_messages = self.settings.gemini_max_history_turns * 2
+        max_messages = self.settings.openai_max_history_turns * 2
         if len(self.history) > max_messages:
             self.history = self.history[-max_messages:]
 
@@ -96,6 +96,31 @@ class VoiceSession:
 
     def register_task(self, task: asyncio.Task) -> None:
         self._tasks.append(task)
+
+    def clear_pending_tts(self) -> int:
+        """Drop queued TTS sentences so a barge-in can take effect immediately."""
+        cleared = 0
+        retained_sentinel = False
+
+        while not self.tts_queue.empty():
+            try:
+                item = self.tts_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+            if item is QUEUE_SENTINEL:
+                retained_sentinel = True
+                break
+
+            cleared += 1
+
+        if retained_sentinel:
+            try:
+                self.tts_queue.put_nowait(QUEUE_SENTINEL)
+            except asyncio.QueueFull:
+                pass
+
+        return cleared
 
     async def teardown(self) -> None:
         """Cancel all tasks and drain queues on disconnect."""

@@ -24,20 +24,8 @@ class Settings(BaseSettings):
 
     # ── API Keys ──────────────────────────────────────────────────────────────
     deepgram_api_key: str = Field(..., description="Deepgram API key")
-    gemini_api_key: str = Field(..., description="Google Gemini API key")
-    elevenlabs_api_key: str = Field(..., description="ElevenLabs API key")
-
-    # ── ElevenLabs ────────────────────────────────────────────────────────────
-    # Rachel — low-latency, natural voice
-    elevenlabs_voice_id: str = Field(
-        default="21m00Tcm4TlvDq8ikWAM",
-        description="ElevenLabs voice ID",
-    )
-    elevenlabs_model_id: str = Field(
-        default="eleven_turbo_v2_5",
-        description="ElevenLabs model (turbo for lowest latency)",
-    )
-
+    openai_api_key: str = Field(..., description="OpenAI API key")
+    openai_base_url: str | None = Field(default=None, description="Optional Base URL")
     # ── Deepgram ─────────────────────────────────────────────────────────────
     deepgram_model: str = Field(default="nova-2", description="Deepgram model")
     deepgram_language: str = Field(default="en-US")
@@ -45,17 +33,25 @@ class Settings(BaseSettings):
         default=300,
         description="Silence (ms) before Deepgram finalises transcript",
     )
-
-    # ── Gemini ───────────────────────────────────────────────────────────────
-    gemini_model: str = Field(
-        default="gemini-2.0-flash",
-        description="Gemini model to use",
+    deepgram_tts_model: str = Field(
+        default="aura-asteria-en", 
+        description="Deepgram Aura TTS voice model"
     )
-    gemini_max_history_turns: int = Field(
+    deepgram_tts_sample_rate: int = Field(
+        default=24000,
+        description="Sample rate for Deepgram Aura PCM output",
+    )
+
+    # ── OpenAI ───────────────────────────────────────────────────────────────
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        description="OpenAI model to use",
+    )
+    openai_max_history_turns: int = Field(
         default=10,
         description="Max conversation turns kept in session memory",
     )
-    gemini_timeout_s: float = Field(
+    openai_timeout_s: float = Field(
         default=8.0,
         description="LLM response timeout in seconds",
     )
@@ -75,11 +71,12 @@ class Settings(BaseSettings):
     tts_queue_maxsize: int = Field(default=200)
 
     # ── Cost Rates (USD) ──────────────────────────────────────────────────────
-    # Based on published pricing as of Q1 2025
-    deepgram_cost_per_minute: float = Field(default=0.0043)
-    gemini_cost_per_1m_input_tokens: float = Field(default=0.075)
-    gemini_cost_per_1m_output_tokens: float = Field(default=0.30)
-    elevenlabs_cost_per_1k_chars: float = Field(default=0.30)
+    # Defaults match published pay-as-you-go pricing as of 2026-03-31 and can
+    # still be overridden via environment variables when needed.
+    deepgram_cost_per_minute: float = Field(default=0.0058)
+    deepgram_tts_cost_per_1k_chars: float = Field(default=0.015)
+    openai_cost_per_1m_input_tokens: float = Field(default=0.59)
+    openai_cost_per_1m_output_tokens: float = Field(default=0.79)
 
     @field_validator("log_level")
     @classmethod
@@ -89,6 +86,13 @@ class Settings(BaseSettings):
         if upper not in valid:
             raise ValueError(f"log_level must be one of {valid}")
         return upper
+
+    @field_validator("deepgram_tts_sample_rate")
+    @classmethod
+    def validate_tts_sample_rate(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("deepgram_tts_sample_rate must be positive")
+        return v
 
 
 @lru_cache(maxsize=1)

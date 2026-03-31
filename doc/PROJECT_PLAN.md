@@ -23,22 +23,22 @@
 - [x] Send partial transcripts to client as JSON
 
 ### Phase 3 — LLM + Tool Calling (Hours 7–12)
-- [x] Gemini Flash streaming client (`google-genai` SDK)
+- [x] Groq Llama 3.3 70B (via OpenAI SDK)
 - [x] System prompt (voice assistant persona)
 - [x] Sentence chunker (buffer tokens, emit on boundaries)
-- [x] `play_audio` tool definition for Gemini
+- [x] `play_audio` tool definition
 - [x] Tool executor (load clip, send via WS)
 - [x] Conversation memory (last 10 turns, in-memory)
 - [x] LLM latency logging (TTFT + total)
 - [x] Token counting for cost estimation
 
 ### Phase 4 — TTS Integration (Hours 12–16)
-- [ ] ElevenLabs streaming WebSocket client
-- [ ] Text streaming (sentence chunks → ElevenLabs)
-- [ ] Audio forwarding (MP3 chunks → client WS)
-- [ ] Voice selection (fast, natural voice)
-- [ ] TTS latency logging
-- [ ] Character counting for cost estimation
+- [x] Microsoft Edge TTS integration (Free, no API key)
+- [x] Text streaming (sentence chunks → Edge TTS)
+- [x] Audio forwarding (MP3 chunks → client WS)
+- [x] Voice selection (en-US-AriaNeural)
+- [x] TTS latency logging
+- [x] Character counting for cost estimation
 - [x] Full pipeline end-to-end test
 
 ### Phase 5 — Metrics & Observability (Hours 16–19)
@@ -56,7 +56,7 @@
 - [x] Browser client (`index.html` + `app.js`, Web Audio API)
 - [x] Test script (`test_client.py` with pre-recorded WAV)
 - [x] `README.md` (all required sections)
-- [ ] Demo video recorded (3–5 min)
+- [/] Demo video recording (in progress)
 
 ---
 
@@ -113,15 +113,15 @@ Each WebSocket connection spawns a **session** with 4 concurrent tasks:
 - **Why**: Native WebSocket API, server-side VAD/endpointing, fastest streaming STT available
 - **Cost**: $0.0043/minute
 
-### LLM: Google Gemini 2.0 Flash
-- **TTFT**: ~300-500ms (fastest major LLM)
-- **Why**: Native streaming + tool-calling, generous free tier, lowest TTFT
-- **Cost**: $0.075/1M input tokens, $0.30/1M output tokens
+### LLM: Groq Llama 3.3 70B (via OpenAI SDK)
+- **TTFT**: ~270-350ms (Ultra-fast LPU inference)
+- **Why**: Fastest major LLM on Groq's hardware, native tool-calling, OpenAI-compatible SDK
+- **Cost**: $0.15/1M input tokens, $0.60/1M output tokens
 
-### TTS: ElevenLabs (Streaming WebSocket)
-- **Latency**: ~200-300ms to first audio chunk
-- **Why**: WebSocket streaming API, best voice quality, streams audio as text arrives
-- **Cost**: ~$0.30/1K characters
+### TTS: Microsoft Edge TTS (Free)
+- **Latency**: ~300-500ms to first audio chunk
+- **Why**: 100% free, no API keys, high-quality neural voices, low-latency streaming
+- **Cost**: $0.00 (Unlimited synthesis)
 
 ### Latency Budget
 | Stage | Target | Running Total |

@@ -21,6 +21,7 @@ RUN uv venv /opt/venv && uv sync --frozen --no-install-project --no-dev
 # Copy application files
 COPY ./app ./app
 COPY ./client ./client
+COPY ./assets ./assets
 
 # Expose port
 EXPOSE 8000
