@@ -36,6 +36,8 @@ class TurnMetrics:
     llm_start_s: float | None = None
     llm_first_token_s: float | None = None
     llm_done_s: float | None = None
+    tool_calls: int = 0
+    tool_total_ms_accum: float = 0.0
     tts_first_chunk_s: float | None = None
     tts_done_s: float | None = None
     turn_end_s: float | None = None
@@ -44,6 +46,7 @@ class TurnMetrics:
     stt_audio_seconds: float = 0.0
     llm_input_tokens: int = 0
     llm_output_tokens: int = 0
+    tool_audio_bytes: int = 0
     tts_characters: int = 0
 
     # Costs (USD)
@@ -72,6 +75,12 @@ class TurnMetrics:
         return max(0.0, (self.llm_done_s - self.stt_final_received_s) * 1000)
 
     @property
+    def tool_ms(self) -> float | None:
+        if self.tool_calls <= 0:
+            return None
+        return max(0.0, self.tool_total_ms_accum)
+
+    @property
     def tts_ttfa_ms(self) -> float | None:
         """Time-to-first-audio from when the first sentence was sent to TTS."""
         if self.tts_first_chunk_s is None or self.llm_first_token_s is None:
@@ -89,6 +98,15 @@ class TurnMetrics:
     def total_cost_usd(self) -> float:
         return self.stt_cost_usd + self.llm_cost_usd + self.tts_cost_usd
 
+    @property
+    def cost_breakdown_usd(self) -> dict[str, float]:
+        return {
+            "stt": round(self.stt_cost_usd, 8),
+            "llm": round(self.llm_cost_usd, 8),
+            "tts": round(self.tts_cost_usd, 8),
+            "total": round(self.total_cost_usd, 8),
+        }
+
     def to_dict(self) -> dict:
         return {
             "turn_index": self.turn_index,
@@ -96,6 +114,7 @@ class TurnMetrics:
                 "stt": self.stt_ms,
                 "llm_ttft": self.llm_ttft_ms,
                 "llm_total": self.llm_total_ms,
+                "tool": self.tool_ms,
                 "tts_ttfa": self.tts_ttfa_ms,
                 "end_to_end": self.end_to_end_ms,
             },
@@ -103,14 +122,11 @@ class TurnMetrics:
                 "stt_audio_seconds": self.stt_audio_seconds,
                 "llm_input_tokens": self.llm_input_tokens,
                 "llm_output_tokens": self.llm_output_tokens,
+                "tool_calls": self.tool_calls,
+                "tool_audio_bytes": self.tool_audio_bytes,
                 "tts_characters": self.tts_characters,
             },
-            "cost_usd": {
-                "stt": round(self.stt_cost_usd, 8),
-                "llm": round(self.llm_cost_usd, 8),
-                "tts": round(self.tts_cost_usd, 8),
-                "total": round(self.total_cost_usd, 8),
-            },
+            "cost_usd": self.cost_breakdown_usd,
         }
 
 
@@ -171,6 +187,40 @@ class SessionMetrics:
         return cost
 
     @property
+    def stt_cost_usd(self) -> float:
+        cost = sum(t.stt_cost_usd for t in self.turns)
+        if self.current_turn:
+            cost += self.current_turn.stt_cost_usd
+        return cost
+
+    @property
+    def llm_cost_usd(self) -> float:
+        cost = sum(t.llm_cost_usd for t in self.turns)
+        if self.current_turn:
+            cost += self.current_turn.llm_cost_usd
+        return cost
+
+    @property
+    def tts_cost_usd(self) -> float:
+        cost = sum(t.tts_cost_usd for t in self.turns)
+        if self.current_turn:
+            cost += self.current_turn.tts_cost_usd
+        return cost
+
+    @property
+    def cost_breakdown_usd(self) -> dict[str, float]:
+        stt = self.stt_cost_usd
+        llm = self.llm_cost_usd
+        tts = self.tts_cost_usd
+        total = stt + llm + tts
+        return {
+            "stt": round(stt, 8),
+            "llm": round(llm, 8),
+            "tts": round(tts, 8),
+            "total": round(total, 8),
+        }
+
+    @property
     def session_duration_s(self) -> float:
         end = self.disconnected_at or time.monotonic()
         return end - self.connected_at
@@ -189,6 +239,7 @@ class SessionMetrics:
                 if self.avg_end_to_end_ms is not None
                 else None
             ),
+            "cost_usd": self.cost_breakdown_usd,
             "total_cost_usd": round(self.total_cost_usd, 6),
             "turns": turns_list,
         }
@@ -229,6 +280,10 @@ class MetricsRegistry:
             if s.current_turn:
                 all_turns.append(s.current_turn)
         e2e_vals = [t.end_to_end_ms for t in all_turns if t.end_to_end_ms is not None]
+        stt_cost = sum(s.stt_cost_usd for s in all_sessions)
+        llm_cost = sum(s.llm_cost_usd for s in all_sessions)
+        tts_cost = sum(s.tts_cost_usd for s in all_sessions)
+        total_cost = stt_cost + llm_cost + tts_cost
 
         return {
             "active_sessions": len(self._active),
@@ -238,9 +293,18 @@ class MetricsRegistry:
                 round(sum(e2e_vals) / len(e2e_vals), 1) if e2e_vals else None
             ),
             "p95_end_to_end_ms": _percentile(e2e_vals, 95),
-            "total_cost_usd": round(sum(s.total_cost_usd for s in all_sessions), 6),
+            "cost_usd": {
+                "stt": round(stt_cost, 8),
+                "llm": round(llm_cost, 8),
+                "tts": round(tts_cost, 8),
+                "total": round(total_cost, 8),
+            },
+            "total_cost_usd": round(total_cost, 6),
             "active_session_details": [
                 s.to_dict() for s in self._active.values()
+            ],
+            "completed_session_details": [
+                s.to_dict() for s in self._completed[-20:]
             ],
         }
 

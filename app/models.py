@@ -130,6 +130,7 @@ class StageTiming(BaseModel):
     stt_ms: float | None = None
     llm_ttft_ms: float | None = None      # Time-to-first-token
     llm_total_ms: float | None = None
+    tool_ms: float | None = None
     tts_ttfa_ms: float | None = None      # Time-to-first-audio-chunk
     tts_total_ms: float | None = None
     end_to_end_ms: float | None = None

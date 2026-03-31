@@ -10,6 +10,7 @@ The executor sends the audio clip as binary frames over the WebSocket.
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path
 
 import structlog
@@ -70,13 +71,24 @@ async def execute_tool(
     """
     log = logger.bind(session_id=str(session.id), tool=tool_name, args=tool_args)
     log.info("tool.executing")
+    started_s = time.monotonic()
 
-    match tool_name:
-        case "play_audio":
-            return await _play_audio(tool_args, session, log)
-        case _:
-            log.warning("tool.unknown")
-            return {"error": f"Unknown tool: {tool_name}"}
+    try:
+        match tool_name:
+            case "play_audio":
+                result = await _play_audio(tool_args, session, log)
+            case _:
+                log.warning("tool.unknown")
+                result = {"error": f"Unknown tool: {tool_name}"}
+    finally:
+        elapsed_ms = max(0.0, (time.monotonic() - started_s) * 1000)
+        turn = session.metrics.current_turn
+        if turn:
+            turn.tool_calls += 1
+            turn.tool_total_ms_accum += elapsed_ms
+        log.info("tool.completed", duration_ms=round(elapsed_ms, 2))
+
+    return result
 
 
 async def _play_audio(
@@ -121,6 +133,9 @@ async def _play_audio(
     try:
         audio_data = clip_path.read_bytes()
         chunk_size = 8192  # 8KB chunks
+        turn = session.metrics.current_turn
+        if turn:
+            turn.tool_audio_bytes += len(audio_data)
 
         # Signal that audio data follows
         await ws.send_json(

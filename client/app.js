@@ -547,20 +547,14 @@ async function fetchMetrics() {
         metricSessions.textContent = String(data.active_sessions ?? 0);
         metricLatency.textContent = latencyMs ? (latencyMs / 1000).toFixed(2) : "--";
 
-        const totalCost = data.total_cost_usd || 0;
+        const totalCost = (data.cost_usd && data.cost_usd.total) || data.total_cost_usd || 0;
         metricCost.textContent = totalCost.toFixed(4);
 
         if (sessionDetails) {
-            let sttTotal = 0;
-            let llmTotal = 0;
-            let ttsTotal = 0;
-
-            for (const turn of sessionDetails.turns || []) {
-                const cost = turn.cost_usd || {};
-                sttTotal += cost.stt || 0;
-                llmTotal += cost.llm || 0;
-                ttsTotal += cost.tts || 0;
-            }
+            const breakdown = sessionDetails.cost_usd || {};
+            const sttTotal = breakdown.stt || 0;
+            const llmTotal = breakdown.llm || 0;
+            const ttsTotal = breakdown.tts || 0;
 
             costStt.textContent = "$" + sttTotal.toFixed(4);
             costLlm.textContent = "$" + llmTotal.toFixed(4);
