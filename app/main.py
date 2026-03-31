@@ -10,8 +10,8 @@ WebSocket session lifecycle:
   1. Client connects → VoiceSession created, 4 tasks spawned via TaskGroup
   2. audio_receiver reads raw binary audio frames, pushes to stt_queue
   3. stt_processor  (Phase 2)  reads stt_queue → Deepgram → emits to llm_queue
-  4. llm_processor  (Phase 3)  reads llm_queue → Gemini  → emits to tts_queue
-  5. tts_processor  (Phase 4)  reads tts_queue → ElevenLabs → sends audio back
+  4. llm_processor  (Phase 3)  reads llm_queue → Groq    → emits to tts_queue
+  5. tts_processor  (Phase 4)  reads tts_queue → Aura WS → sends audio back
   6. Any task raises CancelledError → TaskGroup cancels the rest → teardown
 
 In Phase 1 the stt/llm/tts processors are stubs that echo gracefully.
@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         port=settings.port,
         openai_model=settings.openai_model,
         deepgram_model=settings.deepgram_model,
-        elevenlabs_model=settings.elevenlabs_model_id,
+        deepgram_tts_model=settings.deepgram_tts_model,
     )
     yield
     log.info("voice_agent.shutting_down")
@@ -278,6 +278,7 @@ async def _handle_control_frame(
     match frame.action:
         case ControlAction.START:
             log.info("control.start")
+            session.barge_in_event.clear()
             # Start a new turn in metrics
             session.metrics.start_turn()
 
@@ -323,7 +324,7 @@ async def _stt_processor_stub(session: VoiceSession) -> None:
 async def _llm_processor_stub(session: VoiceSession) -> None:
     """
     Phase 1 stub: drain llm_queue.
-    Replaced by the real Gemini client in Phase 3.
+    Replaced by the real OpenAI-compatible client in Phase 3.
     """
     log = logger.bind(session_id=str(session.id), task="llm_stub")
     log.info("llm_stub.start")
@@ -344,7 +345,7 @@ async def _llm_processor_stub(session: VoiceSession) -> None:
 async def _tts_processor_stub(session: VoiceSession) -> None:
     """
     Phase 1 stub: drain tts_queue.
-    Replaced by the real ElevenLabs client in Phase 4.
+    Replaced by the real Deepgram Aura client in Phase 4.
     """
     log = logger.bind(session_id=str(session.id), task="tts_stub")
     log.info("tts_stub.start")

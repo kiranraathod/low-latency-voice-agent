@@ -48,6 +48,7 @@ async def stt_processor(session: VoiceSession) -> None:
                         if isinstance(result, ListenV1Results):
                             is_final = result.is_final or False
                             speech_final = result.speech_final or False
+                            event_received_s = time.monotonic()
                             
                             text = ""
                             confidence = 0.0
@@ -79,7 +80,6 @@ async def stt_processor(session: VoiceSession) -> None:
                             if is_final and text.strip():
                                 turn = session.metrics.current_turn
                                 if turn:
-                                    turn.stt_final_received_s = time.monotonic()
                                     dur = getattr(result, "duration", 0.0)
                                     turn.stt_audio_seconds += dur
                                     turn.stt_cost_usd += (dur / 60.0) * session.settings.deepgram_cost_per_minute
@@ -89,6 +89,9 @@ async def stt_processor(session: VoiceSession) -> None:
                             # Only send to LLM on speech_final (end of full utterance)
                             # This prevents multiple LLM calls per spoken phrase
                             if speech_final and text.strip():
+                                turn = session.metrics.current_turn
+                                if turn and turn.stt_final_received_s is None:
+                                    turn.stt_final_received_s = event_received_s
                                 log.info("stt.speech_final", text=text)
                                 await session.llm_queue.put(text)
                 except asyncio.CancelledError:

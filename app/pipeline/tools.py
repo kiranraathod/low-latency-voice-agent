@@ -1,5 +1,5 @@
 """
-app/pipeline/tools.py — Tool definitions and executor for Gemini tool-calling.
+app/pipeline/tools.py — Tool definitions and executor for OpenAI-compatible tool-calling.
 
 Tools available:
   play_audio — plays a pre-bundled notification audio clip to the client.
@@ -63,9 +63,9 @@ async def execute_tool(
     session: VoiceSession,
 ) -> dict:
     """
-    Dispatch a tool call from Gemini and return the result dict.
+    Dispatch a tool call from the LLM and return the result dict.
 
-    The result is passed back to Gemini so it can incorporate it into its
+    The result is passed back to the LLM so it can incorporate it into its
     continued response generation.
     """
     log = logger.bind(session_id=str(session.id), tool=tool_name, args=tool_args)

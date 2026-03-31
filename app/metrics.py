@@ -33,6 +33,7 @@ class TurnMetrics:
     # Timing (monotonic seconds; converted to ms on output)
     utterance_start_s: float = field(default_factory=time.monotonic)
     stt_final_received_s: float | None = None
+    llm_start_s: float | None = None
     llm_first_token_s: float | None = None
     llm_done_s: float | None = None
     tts_first_chunk_s: float | None = None
@@ -56,33 +57,33 @@ class TurnMetrics:
     def stt_ms(self) -> float | None:
         if self.stt_final_received_s is None:
             return None
-        return (self.stt_final_received_s - self.utterance_start_s) * 1000
+        return max(0.0, (self.stt_final_received_s - self.utterance_start_s) * 1000)
 
     @property
     def llm_ttft_ms(self) -> float | None:
         if self.llm_first_token_s is None or self.stt_final_received_s is None:
             return None
-        return (self.llm_first_token_s - self.stt_final_received_s) * 1000
+        return max(0.0, (self.llm_first_token_s - self.stt_final_received_s) * 1000)
 
     @property
     def llm_total_ms(self) -> float | None:
         if self.llm_done_s is None or self.stt_final_received_s is None:
             return None
-        return (self.llm_done_s - self.stt_final_received_s) * 1000
+        return max(0.0, (self.llm_done_s - self.stt_final_received_s) * 1000)
 
     @property
     def tts_ttfa_ms(self) -> float | None:
         """Time-to-first-audio from when the first sentence was sent to TTS."""
         if self.tts_first_chunk_s is None or self.llm_first_token_s is None:
             return None
-        return (self.tts_first_chunk_s - self.llm_first_token_s) * 1000
+        return max(0.0, (self.tts_first_chunk_s - self.llm_first_token_s) * 1000)
 
     @property
     def end_to_end_ms(self) -> float | None:
-        ref = self.tts_first_chunk_s or self.turn_end_s
-        if ref is None:
+        # Only count turns that actually produced assistant audio.
+        if self.tts_first_chunk_s is None:
             return None
-        return (ref - self.utterance_start_s) * 1000
+        return max(0.0, (self.tts_first_chunk_s - self.utterance_start_s) * 1000)
 
     @property
     def total_cost_usd(self) -> float:
