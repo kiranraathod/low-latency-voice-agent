@@ -37,8 +37,6 @@ Traceback (most recent call last):
   File "C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\.venv\Lib\site-packages\uvicorn\config.py", line 441, in load
     self.loaded_app = import_from_string(self.app)
                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\.venv\Lib\site-packages\uvicorn\importer.py", line 22, in import_from_string
-    raise exc from None
   File "C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\.venv\Lib\site-packages\uvicorn\importer.py", line 19, in import_from_string
     module = importlib.import_module(module_str)
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -51,8 +49,8 @@ Traceback (most recent call last):
   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\app\main.py", line 46, in <module>
-    from app.pipeline.tts import tts_processor
-  File "C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\app\pipeline\tts.py", line 22, in <module>
-    from deepgram.clients.speak.v1.websocket.response import OpenResponse
-ModuleNotFoundError: No module named 'deepgram.clients'
+  File "C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\app\main.py", line 45, in <module>
+    from app.pipeline.stt import stt_processor
+  File "C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\app\pipeline\stt.py", line 19, in <module>
+    from deepgram.client import AsyncDeepgramClient
+ImportError: cannot import name 'AsyncDeepgramClient' from 'deepgram.client' (C:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva\.venv\Lib\site-packages\deepgram\client.py)

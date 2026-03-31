@@ -46,6 +46,10 @@ class Settings(BaseSettings):
         default=300,
         description="Silence (ms) before Deepgram finalises transcript",
     )
+    deepgram_tts_model: str = Field(
+        default="aura-asteria-en", 
+        description="Deepgram Aura TTS voice model"
+    )
 
     # ── OpenAI ───────────────────────────────────────────────────────────────
     openai_model: str = Field(
@@ -78,6 +82,7 @@ class Settings(BaseSettings):
     # ── Cost Rates (USD) ──────────────────────────────────────────────────────
     # Based on published pricing as of Q1 2025
     deepgram_cost_per_minute: float = Field(default=0.0043)
+    deepgram_tts_cost_per_1k_chars: float = Field(default=0.015)
     openai_cost_per_1m_input_tokens: float = Field(default=0.15)
     openai_cost_per_1m_output_tokens: float = Field(default=0.60)
     elevenlabs_cost_per_1k_chars: float = Field(default=0.30)

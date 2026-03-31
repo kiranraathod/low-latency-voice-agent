@@ -41,24 +41,28 @@ We migrated multiple components during development:
 5. **UI label mismatches**: Updated "LLM (Gemini)" → "LLM (Groq)" and "TTS (ElevenLabs)" → "TTS (Edge)" in `index.html`.
 6. **README outdated**: Updated all references from Gemini/ElevenLabs to Groq/Edge TTS with correct pricing and rationale.
 
-## Current Status ✅ (100% Code Complete)
+## Current Status ✅ (Code Complete, Latency Issue Identified)
 - **Phase 1**: Transport & skeleton — DONE
 - **Phase 2**: Deepgram STT with `speech_final` gating — DONE
-- **Phase 3**: LLM with tool-calling (OpenAI SDK → Groq) — DONE
-- **Phase 4**: Edge TTS streaming — DONE
+- **Phase 3**: LLM with tool-calling (OpenAI SDK → Groq Llama 3.3) — DONE
+- **Phase 4**: Edge TTS streaming — DONE, **BUT High Latency**
 - **Phase 5**: Metrics & observability (per-turn cost, latency, `/metrics`) — DONE
 - **Phase 6**: Docker, client UI, README — DONE
 - **Bug fixes**: All UI sync, duplicate call, and label issues — DONE
 
-## THE ONE REMAINING TASK
-**Record the 3–5 minute demo video** as specified in `adiiva_r.md`:
-1. Service startup via Docker (`docker compose up --build`)
-2. Live voice interaction (multiple turns)
-3. Evidence of streaming behavior (partial STT transcripts updating, early TTS audio)
-4. Invocation of the `play_audio` tool (ask "play a notification sound")
-5. `/metrics` output showing latency and cost breakdown
-6. Screen recording with audio, single take preferred
-7. Add video link to README.md
+### ⚠️ The 40s Latency Issue (Discovered in this session)
+During testing, we discovered the `edge-tts` (Microsoft's free endpoint) implementation resulted in **40 seconds of TTS latency**. This is likely because it acts as an unofficial scraper rather than a true streaming endpoint, so it buffers/throttles heavily.
+
+**Solution Researched**: We need to move the TTS processor to **Deepgram Aura** (Streaming WebSockets). This aligns with industry standards used in low-latency repositories (like Pipecat/Call-Automation) where the LLM streams directly into the TTS WebSocket.
+
+### 🛑 Deepgram SDK Migration Blocker
+We attempted to migrate `app/pipeline/tts.py` to use Deepgram Aura Streaming WebSockets, but ran into `deepgram-sdk` compatibility issues:
+1. `deepgram-sdk==6.1.1` (which currently powers our STT script successfully via `client.listen.v1.connect()`) raised `ModuleNotFoundError: No module named 'deepgram.clients'` when trying to import `OpenResponse` from the documentation example.
+2. Downgrading to `deepgram-sdk==3.6.0` fixed the import mismatch, but running `client.speak.websocket.v("1")` raised `AttributeError: 'AsyncSpeakClient' object has no attribute 'websocket'`. Deepgram SDK v3 structure might only support REST-based HTTP streaming for TTS, or the websocket constructor is located elsewhere.
+
+## THE REMAINING TASK FOR NEXT SESSION
+1. **Fix the Deepgram Aura TTS Implementation**: Navigate the Deepgram SDK documentation or use raw websockets (`websockets.connect`) directly against Deepgram's `wss://api.deepgram.com/v1/speak` endpoint if the Python SDK doesn't natively support it yet. Update `app/pipeline/tts.py`.
+2. **Record the 3–5 minute demo video** as specified in `adiiva_r.md` showing sub-2s latency.
 
 ## How to Run
 ```bash
@@ -81,10 +85,8 @@ ELEVENLABS_API_KEY=<any-value-config-requires-it>
 </project_context>
 
 <instructions>
-1. The app is FULLY WORKING. Do NOT rebuild, refactor, or change the pipeline unless the user explicitly asks.
-2. Do NOT attempt to use `google-genai`, DeepSeek, or ElevenLabs. The system runs on Groq + Edge TTS.
-3. The ONLY deliverable remaining is the demo video recording.
-4. If the user asks for help scripting the demo, reference the requirements in `adiiva_r.md` (lines 68-79).
-5. If the user asks for minor UI tweaks or prompt tuning, implement them carefully without breaking the working pipeline.
+1. The app is mostly WORKING, but TTS is bottlenecking. 
+2. Your primary goal is to rewrite `app/pipeline/tts.py` to use Deepgram Aura (streaming WebSocket) to eliminate the 40s wait time.
+3. Once TTS is fast, record the final demo video.
 </instructions>
 ```
