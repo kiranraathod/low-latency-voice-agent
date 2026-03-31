@@ -97,6 +97,31 @@ class VoiceSession:
     def register_task(self, task: asyncio.Task) -> None:
         self._tasks.append(task)
 
+    def clear_pending_tts(self) -> int:
+        """Drop queued TTS sentences so a barge-in can take effect immediately."""
+        cleared = 0
+        retained_sentinel = False
+
+        while not self.tts_queue.empty():
+            try:
+                item = self.tts_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+            if item is QUEUE_SENTINEL:
+                retained_sentinel = True
+                break
+
+            cleared += 1
+
+        if retained_sentinel:
+            try:
+                self.tts_queue.put_nowait(QUEUE_SENTINEL)
+            except asyncio.QueueFull:
+                pass
+
+        return cleared
+
     async def teardown(self) -> None:
         """Cancel all tasks and drain queues on disconnect."""
         log = logger.bind(session_id=str(self.id))

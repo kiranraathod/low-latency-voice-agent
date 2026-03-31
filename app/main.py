@@ -93,6 +93,11 @@ try:
 except RuntimeError:
     pass  # client/ dir may not exist yet in early phases
 
+try:
+    app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+except RuntimeError:
+    pass
+
 
 # ── REST Endpoints ────────────────────────────────────────────────────────────
 
@@ -279,8 +284,6 @@ async def _handle_control_frame(
         case ControlAction.START:
             log.info("control.start")
             session.barge_in_event.clear()
-            # Start a new turn in metrics
-            session.metrics.start_turn()
 
         case ControlAction.STOP:
             log.info("control.stop")
@@ -288,7 +291,8 @@ async def _handle_control_frame(
             await session.stt_queue.put(QUEUE_SENTINEL)
 
         case ControlAction.BARGE_IN:
-            log.info("control.barge_in")
+            cleared = session.clear_pending_tts()
+            log.info("control.barge_in", cleared_tts_items=cleared)
             session.barge_in_event.set()
 
         case _:

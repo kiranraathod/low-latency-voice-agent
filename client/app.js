@@ -3,6 +3,9 @@ const MP3_MIME_TYPE = "audio/mpeg";
 const PCM_SAMPLE_RATE = 24000;
 const PCM_PLAYBACK_LEAD_S = 0.03;
 const MIC_BUFFER_SIZE = 1024;
+const PCM_PLAYBACK_WINDOW_MS = 1200;
+const MP3_PLAYBACK_WINDOW_MS = 5000;
+const BARGE_IN_COOLDOWN_MS = 1200;
 
 const state = {
     ws: null,
@@ -16,6 +19,13 @@ const state = {
     mp3Queue: [],
     mp3AudioElement: null,
     nextPcmPlaybackTime: 0,
+    assistantPlaybackActive: false,
+    assistantPlaybackUntilMs: 0,
+    assistantPlaybackTimer: null,
+    lastBargeInAtMs: 0,
+    activePcmSources: new Set(),
+    ignoreServerMp3: false,
+    toolAudioElement: null,
 };
 
 // UI Elements
@@ -50,7 +60,14 @@ async function startSession() {
         state.audioContext = new (window.AudioContext || window.webkitAudioContext)({
             sampleRate: 16000,
         });
-        state.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        state.mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                channelCount: 1,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
+        });
 
         const source = state.audioContext.createMediaStreamSource(state.mediaStream);
         state.processor = state.audioContext.createScriptProcessor(MIC_BUFFER_SIZE, 1, 1);
@@ -70,6 +87,7 @@ async function startSession() {
             micBtn.textContent = "DISCONNECT";
             state.isActive = true;
             state.currentAudioMimeType = MP3_MIME_TYPE;
+            state.ignoreServerMp3 = false;
             resetTranscriptSessionState({ clearView: true });
 
             state.ws.send(JSON.stringify({ type: "control", action: "start" }));
@@ -111,6 +129,7 @@ async function startSession() {
 
 function stopSession() {
     resetTranscriptSessionState();
+    interruptAssistantPlayback({ restartMp3Player: false });
 
     if (state.processor) {
         state.processor.disconnect();
@@ -134,6 +153,8 @@ function stopSession() {
 
     resetMp3Playback();
     resetPcmPlayback();
+    stopToolAudioPlayback();
+    state.ignoreServerMp3 = false;
 
     state.isActive = false;
     micBtn.classList.remove("active");
@@ -205,6 +226,78 @@ function resetPcmPlayback() {
     state.nextPcmPlaybackTime = state.audioContext ? state.audioContext.currentTime : 0;
 }
 
+function stopToolAudioPlayback() {
+    if (state.toolAudioElement) {
+        try {
+            state.toolAudioElement.pause();
+            state.toolAudioElement.currentTime = 0;
+        } catch (_) {
+            // Ignore teardown errors.
+        }
+    }
+    state.toolAudioElement = null;
+}
+
+function sendControl(action, payload = {}) {
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ type: "control", action, payload }));
+    }
+}
+
+function markAssistantPlaybackActive(durationMs) {
+    const now = Date.now();
+    state.assistantPlaybackActive = true;
+    state.assistantPlaybackUntilMs = Math.max(
+        state.assistantPlaybackUntilMs,
+        now + durationMs
+    );
+
+    clearTimeout(state.assistantPlaybackTimer);
+    state.assistantPlaybackTimer = setTimeout(() => {
+        if (Date.now() >= state.assistantPlaybackUntilMs && state.activePcmSources.size === 0) {
+            state.assistantPlaybackActive = false;
+            state.assistantPlaybackUntilMs = 0;
+            state.assistantPlaybackTimer = null;
+            state.lastBargeInAtMs = 0;
+        }
+    }, durationMs + 50);
+}
+
+function interruptAssistantPlayback({ restartMp3Player = true } = {}) {
+    clearTimeout(state.assistantPlaybackTimer);
+    state.assistantPlaybackTimer = null;
+    state.assistantPlaybackActive = false;
+    state.assistantPlaybackUntilMs = 0;
+
+    state.activePcmSources.forEach((source) => {
+        try {
+            source.onended = null;
+            source.stop(0);
+        } catch (_) {
+            // Ignore sources that have already finished.
+        }
+    });
+    state.activePcmSources.clear();
+
+    resetPcmPlayback();
+    resetMp3Playback();
+    stopToolAudioPlayback();
+
+    if (restartMp3Player && state.isActive) {
+        initMp3Player();
+    }
+}
+
+function triggerBargeIn(reason) {
+    const now = Date.now();
+    if (!state.assistantPlaybackActive) return;
+    if (now - state.lastBargeInAtMs < BARGE_IN_COOLDOWN_MS) return;
+
+    state.lastBargeInAtMs = now;
+    sendControl("barge_in", { reason });
+    interruptAssistantPlayback();
+}
+
 function resetTranscriptSessionState({ clearView = false } = {}) {
     clearTimeout(window._assistantResetTimer);
     window._assistantResetTimer = null;
@@ -241,6 +334,11 @@ async function routeBinaryAudio(buffer) {
         return;
     }
 
+    if (state.ignoreServerMp3) {
+        return;
+    }
+
+    markAssistantPlaybackActive(MP3_PLAYBACK_WINDOW_MS);
     state.mp3Queue.push(buffer);
     pushNextMp3Chunk();
 
@@ -275,6 +373,14 @@ async function playPcmChunk(buffer) {
     const source = state.audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(state.audioContext.destination);
+    state.activePcmSources.add(source);
+    source.onended = () => {
+        state.activePcmSources.delete(source);
+        if (state.activePcmSources.size === 0 && Date.now() >= state.assistantPlaybackUntilMs) {
+            state.assistantPlaybackActive = false;
+            state.assistantPlaybackUntilMs = 0;
+        }
+    };
 
     const startAt = Math.max(
         state.audioContext.currentTime + PCM_PLAYBACK_LEAD_S,
@@ -282,6 +388,9 @@ async function playPcmChunk(buffer) {
     );
     source.start(startAt);
     state.nextPcmPlaybackTime = startAt + audioBuffer.duration;
+    markAssistantPlaybackActive(
+        Math.max(PCM_PLAYBACK_WINDOW_MS, Math.ceil(audioBuffer.duration * 1000) + 150)
+    );
 }
 
 function handleJsonPayload(payload) {
@@ -289,6 +398,8 @@ function handleJsonPayload(payload) {
         renderTranscript(payload);
     } else if (payload.type === "llm_chunk") {
         handleLLMChunk(payload);
+    } else if (payload.type === "tool_call") {
+        handleToolCall(payload);
     } else if (payload.type === "audio_ready") {
         handleAudioReady(payload);
     } else if (payload.type === "status") {
@@ -298,13 +409,71 @@ function handleJsonPayload(payload) {
     }
 }
 
+function handleToolCall(payload) {
+    if (payload.tool_name !== "play_audio") return;
+
+    const clipName = payload.tool_args && payload.tool_args.clip_name;
+    if (clipName === "notification") {
+        state.ignoreServerMp3 = true;
+        playBundledToolClip("/assets/notification.mp3");
+    }
+}
+
+function playBundledToolClip(src) {
+    stopToolAudioPlayback();
+
+    const audio = new Audio(src);
+    audio.preload = "auto";
+    audio.volume = 1.0;
+    state.toolAudioElement = audio;
+    audio.onended = () => {
+        if (state.toolAudioElement === audio) {
+            state.toolAudioElement = null;
+        }
+    };
+    audio.onerror = (event) => {
+        console.error("Tool audio playback failed", event);
+    };
+
+    audio.play().catch((error) => {
+        console.error("Tool audio auto-play blocked", error);
+    });
+}
+
 function handleAudioReady(payload) {
     state.currentAudioMimeType = payload.mime_type || MP3_MIME_TYPE;
+    if (state.currentAudioMimeType !== MP3_MIME_TYPE) {
+        state.ignoreServerMp3 = false;
+    }
+
+    if (state.ignoreServerMp3 && state.currentAudioMimeType === MP3_MIME_TYPE) {
+        return;
+    }
+
+    markAssistantPlaybackActive(
+        state.currentAudioMimeType === MP3_MIME_TYPE
+            ? MP3_PLAYBACK_WINDOW_MS
+            : PCM_PLAYBACK_WINDOW_MS
+    );
 }
 
 function renderTranscript(payload) {
     const kind = payload.kind ? payload.kind.toLowerCase() : "";
     if (kind === "partial") {
+        if (payload.text && payload.text.trim() && state.toolAudioElement) {
+            stopToolAudioPlayback();
+        }
+
+        if (payload.text && payload.text.trim()) {
+            triggerBargeIn("partial_transcript");
+        }
+
+        if (window._assistantResetTimer) {
+            clearTimeout(window._assistantResetTimer);
+            window._assistantResetTimer = null;
+            currentAssistantElement = null;
+        }
+
         if (!partialTranscriptElement || !transcriptContainer.contains(partialTranscriptElement)) {
             partialTranscriptElement = document.createElement("div");
             partialTranscriptElement.className = "message msg-partial";
@@ -317,18 +486,19 @@ function renderTranscript(payload) {
             partialTranscriptElement = null;
         }
 
-        if (!currentAssistantElement || !transcriptContainer.contains(currentAssistantElement)) {
-            const finalElem = document.createElement("div");
-            finalElem.className = "message msg-user";
-            finalElem.textContent = payload.text;
-            transcriptContainer.appendChild(finalElem);
+        clearTimeout(window._assistantResetTimer);
+        window._assistantResetTimer = null;
 
-            currentAssistantElement = document.createElement("div");
-            currentAssistantElement.className = "message msg-assistant";
-            currentAssistantElement.textContent = "";
-            currentAssistantElement.style.opacity = "0.5";
-            transcriptContainer.appendChild(currentAssistantElement);
-        }
+        const finalElem = document.createElement("div");
+        finalElem.className = "message msg-user";
+        finalElem.textContent = payload.text;
+        transcriptContainer.appendChild(finalElem);
+
+        currentAssistantElement = document.createElement("div");
+        currentAssistantElement.className = "message msg-assistant";
+        currentAssistantElement.textContent = "";
+        currentAssistantElement.style.opacity = "0.5";
+        transcriptContainer.appendChild(currentAssistantElement);
     }
 
     transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
