@@ -278,7 +278,7 @@ async function fetchMetrics() {
         const data = await response.json();
         
         metricSessions.textContent = data.active_sessions || "1";
-        metricLatency.textContent = data.avg_end_to_end_ms ? Math.round(data.avg_end_to_end_ms) : "--";
+        metricLatency.textContent = data.avg_end_to_end_ms ? (data.avg_end_to_end_ms / 1000).toFixed(2) : "--";
         
         let totalCost = data.total_cost_usd || 0;
         metricCost.textContent = totalCost.toFixed(4);
