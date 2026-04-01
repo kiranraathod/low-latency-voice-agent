@@ -246,12 +246,11 @@ prototype_adiiva/
 │   └── test_client.py     # Headless test: sends pre-recorded WAV, saves audio output
 ├── assets/
 │   ├── demo_1.mp4         # Demo video — stable build (5–6s latency)
-│   ├── demo_2.mp4         # Demo video — experimental Edge TTS build (~1.5s)
+│   ├── demo_2.mp4         # Demo video — experimental.
 │   └── notification.mp3   # Bundled audio clip for the play_audio tool
 ├── doc/
 │   ├── adiiva_r.md        # Original assignment specification
 │   ├── project_plan.md    # Phase-by-phase plan and architecture
-│   ├── DEMO_PREP.md       # Demo video script and checklist
 │   └── HANDOVER_PROMPT.md # Context document for AI-assisted development sessions
 ├── .env.example           # Configuration template — copy to .env and fill in keys
 ├── Dockerfile
