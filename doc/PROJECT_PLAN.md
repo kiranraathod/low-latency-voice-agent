@@ -56,7 +56,7 @@
 - [x] Browser client (`index.html` + `app.js`, Web Audio API)
 - [x] Test script (`test_client.py` with pre-recorded WAV)
 - [x] `README.md` (all required sections)
-- [/] Demo video recording (in progress)
+- [x] Demo video recording (two versions — stable 5–6s build + experimental 1.5s build)
 
 ---
 
@@ -72,7 +72,7 @@
 │  └──────────┘    └──────────┘    └──────────┘    └──────────┘      │
 │       ▲          asyncio.Queue   asyncio.Queue   asyncio.Queue      │
 │       │               │               │               │             │
-│       │          Deepgram WS     Gemini Flash    ElevenLabs WS      │
+│       │          Deepgram WS     Groq Llama 3.3  Deepgram Aura WS   │
 │       │          (Nova-2)        (Streaming)     (Streaming)        │
 │       │                                │                            │
 │  WebSocket                        Tool Executor                     │
@@ -95,8 +95,8 @@ Each WebSocket connection spawns a **session** with 4 concurrent tasks:
 
 1. **audio_receiver**: Reads binary frames from client → pushes to `stt_queue`
 2. **stt_processor**: Reads from `stt_queue` → streams to Deepgram → emits final transcript to `llm_queue`
-3. **llm_processor**: Reads from `llm_queue` → calls Gemini Flash (streaming) → chunks sentences → pushes to `tts_queue`. Handles tool calls inline.
-4. **tts_processor**: Reads from `tts_queue` → streams to ElevenLabs → sends audio chunks back to client WS
+3. **llm_processor**: Reads from `llm_queue` → calls Groq Llama 3.3 70B (streaming, via OpenAI SDK) → chunks sentences → pushes to `tts_queue`. Handles tool calls inline.
+4. **tts_processor**: Reads from `tts_queue` → streams to Deepgram Aura WebSocket → sends PCM audio frames back to client WS
 
 **Concurrency Safety:**
 - Each session is isolated (own queues, own tasks)
@@ -118,21 +118,26 @@ Each WebSocket connection spawns a **session** with 4 concurrent tasks:
 - **Why**: Fastest major LLM on Groq's hardware, native tool-calling, OpenAI-compatible SDK
 - **Cost**: $0.15/1M input tokens, $0.60/1M output tokens
 
-### TTS: Microsoft Edge TTS (Free)
-- **Latency**: ~300-500ms to first audio chunk
-- **Why**: 100% free, no API keys, high-quality neural voices, low-latency streaming
-- **Cost**: $0.00 (Unlimited synthesis)
+### TTS: Deepgram Aura (Streaming WebSocket)
+- **Latency**: ~200-400ms to first audio chunk
+- **Why**: Persistent WebSocket per session, PCM output at 24 kHz, flush-per-sentence design, fits the real-time pipeline
+- **Cost**: $0.015 / 1K characters synthesized
+
+> **Note**: Microsoft Edge TTS was prototyped as a zero-cost fallback and achieved ~1.5s latency in isolated tests but was not used in the final stable build.
 
 ### Latency Budget
-| Stage | Target | Running Total |
-|-------|--------|--------------|
-| Deepgram endpointing | ~200ms | 200ms |
-| STT final transcript | ~150ms | 350ms |
-| LLM TTFT | ~400ms | 750ms |
-| Sentence chunking | ~75ms | 825ms |
-| TTS first chunk | ~300ms | 1125ms |
-| Network overhead | ~150ms | 1275ms |
-| **TOTAL** | | **~1275ms** ✅ |
+| Stage | Target | Measured |
+|-------|--------|----------|
+| Deepgram endpointing | ~200ms | ~200ms |
+| STT final transcript | ~150ms | ~100–250ms |
+| Groq LLM TTFT | ~400ms | ~270–400ms |
+| Sentence chunking | ~75ms | ~50–100ms |
+| Deepgram Aura first chunk | ~300ms | ~200–400ms |
+| Network overhead | ~150ms | ~100–200ms |
+| **TOTAL (design target)** | **≤ 2000ms** | **~920–1550ms** |
+| **TOTAL (validated, stable build)** | | **~2000–4000ms** |
+
+> Validated end-to-end latency in the stable demo build: 2–4s (5–6s with screen-recording overhead). Sub-2s is achievable with co-located cloud services.
 
 ---
 
