@@ -20,9 +20,9 @@ https://github.com/user-attachments/assets/demo_1.mp4
 
 > **Local file**: [`assets/demo_1.mp4`](assets/demo_1.mp4)
 
-### Demo 2 — Experimental Build (~1.5s latency)
+### Demo 2 — Experimental Build (~1.5 - 3s latency)
 
-Edge TTS variant achieving lower latency. Local machine bottlenecks were present during recording.
+Try to achieve lower latency. 
 
 https://github.com/user-attachments/assets/demo_2.mp4
 
