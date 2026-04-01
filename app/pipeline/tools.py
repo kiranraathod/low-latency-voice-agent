@@ -1,5 +1,5 @@
 """
-app/pipeline/tools.py — Tool definitions and executor for Gemini tool-calling.
+app/pipeline/tools.py — Tool definitions and executor for OpenAI-compatible tool-calling.
 
 Tools available:
   play_audio — plays a pre-bundled notification audio clip to the client.
@@ -10,10 +10,11 @@ The executor sends the audio clip as binary frames over the WebSocket.
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path
 
 import structlog
-from google.genai import types as genai_types
+    # (Removed google.genai import)
 
 from app.models import AudioReadyFrame, FrameType, ToolCallFrame
 from app.session import VoiceSession
@@ -23,32 +24,35 @@ logger = structlog.get_logger(__name__)
 # Path to the bundled audio clip (created in Phase 6 / assets setup)
 NOTIFICATION_CLIP_PATH = Path("assets/notification.mp3")
 
-# ── Tool Definitions (Gemini FunctionDeclaration format) ──────────────────────
+# ── Tool Definitions (OpenAI Function Calling format) ──────────────────────
 
-PLAY_AUDIO_DECLARATION = genai_types.FunctionDeclaration(
-    name="play_audio",
-    description=(
-        "Play a short audio notification or alert sound to the user. "
-        "Use this when the user asks to hear a sound, chime, or notification."
-    ),
-    parameters=genai_types.Schema(
-        type=genai_types.Type.OBJECT,
-        properties={
-            "clip_name": genai_types.Schema(
-                type=genai_types.Type.STRING,
-                description=(
-                    "The name of the audio clip to play. "
-                    "Currently only 'notification' is supported."
-                ),
-                enum=["notification"],
-            ),
+PLAY_AUDIO_DECLARATION = {
+    "type": "function",
+    "function": {
+        "name": "play_audio",
+        "description": (
+            "Play a short audio notification or alert sound to the user. "
+            "Use this when the user asks to hear a sound, chime, or notification."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "clip_name": {
+                    "type": "string",
+                    "description": (
+                        "The name of the audio clip to play. "
+                        "Currently only 'notification' is supported."
+                    ),
+                    "enum": ["notification"],
+                },
+            },
+            "required": ["clip_name"],
         },
-        required=["clip_name"],
-    ),
-)
+    }
+}
 
-# All tools exposed to Gemini
-ALL_TOOLS = [genai_types.Tool(function_declarations=[PLAY_AUDIO_DECLARATION])]
+# All tools exposed to OpenAI
+ALL_TOOLS = [PLAY_AUDIO_DECLARATION]
 
 
 # ── Tool Executor ─────────────────────────────────────────────────────────────
@@ -60,20 +64,31 @@ async def execute_tool(
     session: VoiceSession,
 ) -> dict:
     """
-    Dispatch a tool call from Gemini and return the result dict.
+    Dispatch a tool call from the LLM and return the result dict.
 
-    The result is passed back to Gemini so it can incorporate it into its
+    The result is passed back to the LLM so it can incorporate it into its
     continued response generation.
     """
     log = logger.bind(session_id=str(session.id), tool=tool_name, args=tool_args)
     log.info("tool.executing")
+    started_s = time.monotonic()
 
-    match tool_name:
-        case "play_audio":
-            return await _play_audio(tool_args, session, log)
-        case _:
-            log.warning("tool.unknown")
-            return {"error": f"Unknown tool: {tool_name}"}
+    try:
+        match tool_name:
+            case "play_audio":
+                result = await _play_audio(tool_args, session, log)
+            case _:
+                log.warning("tool.unknown")
+                result = {"error": f"Unknown tool: {tool_name}"}
+    finally:
+        elapsed_ms = max(0.0, (time.monotonic() - started_s) * 1000)
+        turn = session.metrics.current_turn
+        if turn:
+            turn.tool_calls += 1
+            turn.tool_total_ms_accum += elapsed_ms
+        log.info("tool.completed", duration_ms=round(elapsed_ms, 2))
+
+    return result
 
 
 async def _play_audio(
@@ -118,6 +133,9 @@ async def _play_audio(
     try:
         audio_data = clip_path.read_bytes()
         chunk_size = 8192  # 8KB chunks
+        turn = session.metrics.current_turn
+        if turn:
+            turn.tool_audio_bytes += len(audio_data)
 
         # Signal that audio data follows
         await ws.send_json(

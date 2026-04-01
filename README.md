@@ -218,6 +218,8 @@ The [`.env.example`](.env.example) file is the canonical reference for all confi
 - `OPENAI_BASE_URL` — must be `https://api.groq.com/openai/v1`
 - `OPENAI_MODEL` — `llama-3.3-70b-versatile` (or any Groq model with tool-calling support)
 
+Pricing constants (`DEEPGRAM_COST_PER_MINUTE`, `OPENAI_COST_PER_1M_INPUT_TOKENS`, etc.) in `.env.example` are pre-filled with current public rates and used directly by the `/metrics` cost calculator.
+
 ---
 
 ## 📁 Project Structure
@@ -249,7 +251,8 @@ prototype_adiiva/
 ├── doc/
 │   ├── adiiva_r.md        # Original assignment specification
 │   ├── project_plan.md    # Phase-by-phase plan and architecture
-│   └── DEMO_PREP.md       # Demo video script and checklist
+│   ├── DEMO_PREP.md       # Demo video script and checklist
+│   └── HANDOVER_PROMPT.md # Context document for AI-assisted development sessions
 ├── .env.example           # Configuration template — copy to .env and fill in keys
 ├── Dockerfile
 ├── docker-compose.yml

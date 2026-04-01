@@ -231,6 +231,8 @@ main {
 .message {
   margin-bottom: 1rem;
   line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
   opacity: 0;
   animation: fade-in 0.5s forwards;
 }
@@ -256,6 +258,11 @@ main {
   border-left: 3px solid var(--accent-purple);
   padding-left: 1rem;
   margin-top: 0.5rem;
+}
+
+.msg-system {
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 .metrics-grid {

@@ -10,8 +10,8 @@ Real-time voice AI agent prototype with ≤ 2s end-to-end latency.
 | **Runtime** | Python 3.11+ (asyncio) | Async-first, TaskGroup support |
 | **Framework** | FastAPI + uvicorn | Native WebSocket, async, fast |
 | **STT** | Deepgram Nova-2 (streaming WS) | Fastest streaming STT, server-side VAD |
-| **LLM** | Google Gemini 2.0 Flash | Fastest TTFT, native tool-calling |
-| **TTS** | ElevenLabs (streaming WS) | Best quality, lowest latency TTS |
+| **LLM** | Groq Llama 3.3 70B (OpenAI SDK) | Ultra-low TTFT, OpenAI compatible |
+| **TTS** | Deepgram Aura (streaming WebSocket) | Persistent WS, PCM 24kHz, flush-per-sentence |
 | **Logging** | structlog | Structured JSON logging |
 | **Container** | Docker + docker-compose | Single-command deployment |
 
@@ -54,23 +54,24 @@ Dockerfile, docker-compose.yml, .env.example, README.md
 
 ## API Keys Required
 - `DEEPGRAM_API_KEY`
-- `GEMINI_API_KEY`  
-- `ELEVENLABS_API_KEY`
+- `OPENAI_API_KEY` (your **Groq** key)
+- `OPENAI_BASE_URL=https://api.groq.com/openai/v1`
+- `OPENAI_MODEL=llama-3.3-70b-versatile`
 
 ## Progress Tracking
-- [ ] Phase 1: Foundation & Transport (Hours 0-4)
-- [ ] Phase 2: STT Pipeline (Hours 4-7)
-- [ ] Phase 3: LLM + Tool Calling (Hours 7-12)
-- [ ] Phase 4: TTS Pipeline (Hours 12-16)
+- [x] Phase 1: Foundation & Transport (Hours 0-4)
+- [x] Phase 2: STT Pipeline (Hours 4-7)
+- [x] Phase 3: LLM + Tool Calling (Hours 7-12)
+- [x] Phase 4: TTS Pipeline (Hours 12-16) — Deepgram Aura
 - [x] Phase 5: Metrics & Observability (Hours 16-19)
-- [ ] Phase 6: Docker, Client & Demo (Hours 19-24)
+- [x] Phase 6: Docker, Client & Demo (Hours 19-24) — COMPLETE, two demo videos recorded
 
 ## Commands
 ```bash
 # Setup (uv)
 uv init
 uv venv
-uv add fastapi uvicorn websockets structlog pydantic-settings deepgram-sdk google-genai elevenlabs aiohttp
+uv add fastapi uvicorn websockets structlog pydantic-settings deepgram-sdk openai aiohttp
 
 # Development
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
