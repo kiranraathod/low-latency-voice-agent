@@ -1,4 +1,4 @@
-# Adiiva — Real-Time Voice AI Agent
+# Low-Latency Voice AI Agent
 
 > A production-grade, fully asynchronous voice pipeline that transforms browser microphone audio into spoken AI responses in under two seconds. Built to validate the architectural principles that matter at scale: streaming-first design, stage-isolated concurrency, and latency measured in milliseconds — not user frustration.
 
@@ -339,7 +339,7 @@ This is not a best-effort cleanup — it is enforced by the `TaskGroup` contract
 ## 📁 Project Structure
 
 ```
-prototype_adiiva/
+low-latency-voice-agent/
 ├── .agent/
 │   ├── engineering-ai-engineer.md      # AI engineer persona for assisted development sessions
 │   └── engineering-technical-writer.md # Technical writer persona for documentation sessions
@@ -366,7 +366,6 @@ prototype_adiiva/
 │   ├── demo_2.mp4           # Edge TTS experiment (~1.5s)
 │   └── notification.mp3     # Bundled audio clip for the play_audio tool
 ├── doc/
-│   ├── adiiva_r.md          # Original assignment specification
 │   ├── project_plan.md      # Phase-by-phase plan and architecture decisions
 │   └── HANDOVER_PROMPT.md   # Context document for AI-assisted development sessions
 ├── .env.example             # Configuration template — copy to .env
