@@ -14,12 +14,12 @@ A fully asynchronous, containerized real-time voice AI agent with:
 - Metrics and observability via `/health` and `/metrics`
 
 ## Repository
-Path: `c:\Users\ratho\Desktop\data analysis\clone_github\prototype_adiiva`
+Path: `c:\Users\ratho\Desktop\data analysis\clone_github\low-latency-voice-agent`
 
 ## Critical Files — READ THESE FIRST
 1. `PROJECT_PLAN.md` — architecture and roadmap history
 2. `claude.md` — latency budget and constraints
-3. `adiiva_r.md` — original assignment requirements
+3. `low_latency_voice_agent_r.md` — original assignment requirements
 4. `app/main.py` — FastAPI app and task orchestration
 5. `app/pipeline/tts.py` — Deepgram Aura TTS implementation
 6. `client/app.js` — browser playback path for Aura PCM + MP3 tool audio
@@ -86,7 +86,7 @@ So the remaining uncertainty is operational, not architectural:
 ## Working Tree Notes
 The repo is currently dirty with intentional source changes plus generated metadata/artifacts from verification:
 - Source files changed intentionally
-- `prototype_adiiva.egg-info/*` was updated by build verification
+- `low-latency-voice-agent.egg-info/*` was updated by build verification
 - tracked `__pycache__` files also changed
 
 Do not blindly revert these unless the user asks. Just be aware they exist.

@@ -2,7 +2,7 @@
 
 ## Project Overview
 Real-time voice AI agent prototype with ≤ 2s end-to-end latency.
-**Assignment**: `adiiva_r.md`
+**Assignment**: `low_latency_voice_agent_r.md`
 
 ## Tech Stack
 | Component | Technology | Why |
