@@ -1,4 +1,4 @@
-# Adiiva — Real-Time Voice AI Agent
+# SReal-Time Voice AI Agent
 
 > A production-grade, fully asynchronous voice pipeline that transforms browser microphone audio into spoken AI responses in under two seconds. Built to validate the architectural principles that matter at scale: streaming-first design, stage-isolated concurrency, and latency measured in milliseconds — not user frustration.
 
