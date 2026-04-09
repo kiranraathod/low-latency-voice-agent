@@ -76,7 +76,7 @@ https://github.com/user-attachments/assets/demo_2.mp4
 ## Delivery Status
 
 | Requirement | Notes |
-|---|---|---|
+|---|---|
 | Streaming STT with partial transcripts | Deepgram Nova-2 · live partials in UI |
 | LLM with tool-calling (`play_audio`) | OpenAI-compatible streaming + function calling |
 | Streaming TTS audio output | Deepgram Aura persistent WebSocket |
@@ -88,7 +88,7 @@ https://github.com/user-attachments/assets/demo_2.mp4
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
